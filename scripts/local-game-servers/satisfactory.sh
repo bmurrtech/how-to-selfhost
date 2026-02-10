@@ -236,6 +236,7 @@ systemctl daemon-reload
 
 echo "Enabling the Satisfactory server service to start on boot..."
 systemctl enable satisfactory
+echo "Service will start automatically on boot; no manual start needed after reboot."
 
 echo "Starting the Satisfactory server service..."
 systemctl start satisfactory

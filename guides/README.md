@@ -21,6 +21,7 @@ For **scripted game server installs** (Satisfactory, Palworld) with SteamCMD, UF
 | WIP | [Certbot](how-to_certbot.md) | Let's Encrypt, webroot vs standalone, Docker |
 | WIP | [Neoxa Mining VM](how-to_neoxa_node.md) | Neoxa wallet, mining node setup |
 | WIP | [Jupyter Lab](how-to-jupyter-lab.md) | JupyterLab setup (references cloud-init) |
+| WIP | [S3 / MinIO Object Storage](how-to_s3-minio.md) | Self-hosted S3-compatible storage, rclone, game save backups |
 | Incomplete | [Email Server](how-to-email-server.md) | Mailcow/VPS email (draft; reverse DNS / static IP requirements) |
 | Incomplete | [Google Cloud VM](how-to-google-cloud-vm.md) | GCP free tier VM (partial; more guides planned) |
 | Other | [My Homelab Projects](my_homelab_projects.md) | Checklist / reference of homelab goals and links |

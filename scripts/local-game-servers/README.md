@@ -73,6 +73,143 @@ See the [Proxmox guide](../../guides/how-to_ultimate_proxmox.md) in the repo for
 |------------------|-------------|-------------|
 | `satisfactory.sh` | Satisfactory | Full setup: multiverse, steam user, SteamCMD, UFW (LAN or VPS), systemd, SSH hardening, Fail2ban, unattended-upgrades. |
 | `palworld.sh`     | Palworld     | Install/update Palworld dedicated server, config, systemd, UFW for LAN, SSH hardening, Fail2ban, unattended-upgrades. |
+| `palworld-save-import.sh` | Palworld | Import world from public URL (wget, unzip); stops/restarts server. |
+| `palworld-save-export.sh` | Palworld | Backup save (local zip + optional rclone to `PALWORLD_BACKUP_REMOTE`); manual run. |
+
+## Local troubleshooting (SteamCMD game servers)
+
+Use these commands on the server (SSH or Proxmox console) to diagnose connection timeouts, failures to connect, or inactive services.
+
+### Start / restart / status
+
+| Game        | Service name   | Commands |
+|-------------|----------------|----------|
+| Palworld    | `palworld`     | `sudo systemctl start palworld` \| `stop` \| `restart` \| `status palworld` |
+| Satisfactory| `satisfactory` | `sudo systemctl start satisfactory` \| `stop` \| `restart` \| `status satisfactory` |
+
+```bash
+# Start server (if inactive after setup)
+sudo systemctl start palworld
+
+# Restart after config changes
+sudo systemctl restart palworld
+
+# Check if running
+sudo systemctl status palworld
+```
+
+Services are enabled to start automatically on boot (`systemctl enable`). No manual start needed after reboot.
+
+### View logs
+
+```bash
+# Palworld: stdout / stderr
+sudo tail -f /var/log/palworld.log
+sudo tail -f /var/log/palworld.err
+
+# Satisfactory: stdout / stderr
+sudo tail -f /var/log/satisfactory.log
+sudo tail -f /var/log/satisfactory.err
+
+# Systemd journal (startup, crashes, restarts)
+sudo journalctl -u palworld -f
+```
+
+### Verify ports and firewall
+
+```bash
+# Check if process is listening on game ports
+ss -ulnp | grep -E '8211|27015'    # Palworld
+ss -ulnp | grep -E '7777|15000'    # Satisfactory
+
+# Firewall status
+sudo ufw status verbose | grep -E 'Status|8211|27015|7777|15000'
+
+# Test from client (PowerShell): TCP connectivity
+# Test-NetConnection -ComputerName 192.168.1.234 -Port 8211
+```
+
+### Connection timeout checklist
+
+| Check | Action |
+|-------|--------|
+| Service inactive | `sudo systemctl start <service>` |
+| Server still loading | Game servers can take 2–5+ min; wait for "Server listening" in logs |
+| Firewall | Ensure client IP is in LAN CIDR (e.g. `192.168.1.0/24`) |
+| Client firewall / AV | Temporarily disable or add exception for game |
+| Version mismatch | Update game client and server to match |
+| Wrong port | Palworld: `IP:8211`. Satisfactory: `IP:7777` (or configured port) |
+
+## Palworld: World save management
+
+Paths below assume default install `/home/steam/palserver`. Server path: `.../Pal/Saved/SaveGames/0/<Folder>/`.
+
+### Method A: SCP / SFTP (no cloud bucket)
+
+Use this if you prefer to copy files directly from your PC to the server without a cloud bucket or scripts.
+
+1. **Stop the server** (on the game server, SSH or Proxmox console):
+   ```bash
+   sudo systemctl stop palworld
+   ```
+
+2. **On your Windows PC**, your local save is at:
+   ```
+   C:\Users\<You>\AppData\Local\Pal\Saved\SaveGames\<SteamID>\<WorldFolder>\
+   ```
+   (In-game: Start Game → select world → click folder icon to open that path.)
+
+3. **On the server**, save path is:
+   ```
+   /home/steam/palserver/Pal/Saved/SaveGames/0/<Folder>/
+   ```
+   If the server already created a world, there will be one folder (e.g. a long UUID). Replace that folder’s *contents* with your local save files, or create a new folder and upload into it (then set `DedicatedServerName` in config to that folder name).
+
+4. **Copy files** using one of:
+   - **WinSCP** or **FileZilla**: connect via SFTP to the server (user e.g. `steam` or your SSH user), navigate to the path above, upload the contents of your local world folder. Do **not** upload `WorldOption.sav` (it can override server settings).
+   - **PowerShell (SCP)**:
+     ```powershell
+     scp -r "C:\Users\YourName\AppData\Local\Pal\Saved\SaveGames\<SteamID>\<WorldFolder>\*" steam@192.168.1.234:/home/steam/palserver/Pal/Saved/SaveGames/0/<TargetFolder>/
+     ```
+     Replace IP and paths with your values.
+
+5. **Restart the server**:
+   ```bash
+   sudo systemctl start palworld
+   ```
+
+### Method B: Import from URL (palworld-save-import.sh)
+
+To use a zip from a public URL (e.g. GCP bucket, MinIO presigned URL):
+
+1. Put your world save in a zip (exclude `WorldOption.sav`).
+2. Upload the zip to a publicly reachable URL (or use a presigned URL).
+3. On the game server:
+   ```bash
+   sudo ./palworld-save-import.sh "https://your-url/palworld-world.zip"
+   ```
+   Optional: `PAL_INSTALL_DIR=/home/steam/palserver` if you used a different install path.
+
+The script stops the server, downloads the zip, extracts to the save directory, fixes ownership, updates `DedicatedServerName` if needed, and restarts the server. On failure it prints recovery steps (restart manually or re-run the script).
+
+### Export / backup (palworld-save-export.sh)
+
+Manual backup (run on the game server via SSH or console):
+
+1. Optional: configure rclone and a remote (see [S3 / MinIO guide](../../guides/how-to_s3-minio.md)).
+2. Set the remote for uploads (optional):
+   ```bash
+   export PALWORLD_BACKUP_REMOTE=minio:palworld-backups
+   ```
+3. Run:
+   ```bash
+   sudo ./palworld-save-export.sh
+   ```
+   The script stops the server, creates a local backup copy, zips it, restarts the server, saves a zip locally, and if `PALWORLD_BACKUP_REMOTE` is set, uploads via rclone. On failure it does not restart the server and prints recovery instructions.
+
+### Roadmap
+
+- Cron job for automated backup to cloud (rclone) — roadmap.
 
 ## Alternative Management Platforms
 

@@ -13,17 +13,44 @@ To give you back control over your digital life, empowering you to learn, host, 
 
 ## Homelab How-to & More
 
-- [ULTIMATE Proxmox Hypervisor](guides/how-to_ultimate_proxmox.md)
-- [ULITMATE Self-Hosted Gamer Server](guides/how-to_game_servers.md)
-- [Remotely Access Your Servers via Cloudflare](guides/how-to_cloudflare.md)
-- [PfSense NG-FW Configuration with VLANS](guides/how-to_pfsense.md)
-- [Self-hosted, Security-hardened Ghost Blog Site](guides/how-to_ghost_blog.md)
-- [Free SASE Solution Using CloudFlare Zero-trust Tunnels](guides/how-to_cloudflare.md)
-- [How-to Create a Flux Node on Proxmox](guides/how-to_flux_proxmox_node.md)
-- [How-to Setup Kemp Load-balancer](guides/how-to_kemp_loadmaster.md)
-- [How-to Make a 24-7 Youtube Livestream](guides/how-to_24-7_livestream.md)
+High-level map of the repo. Each linked folder has a **README** with deeper detail; this is your at-a-glance entry point.
 
-See **[guides/README.md](guides/README.md)** for a full glossary and status of each guide.
+**Status key** (same as [guides/README.md](guides/README.md)): **WIP** = in progress, substantive; **Incomplete** = skeleton or unfinished; **Other** = reference/meta.
+
+### Top guides (ranked)
+
+|  | Status | Guide | One-line |
+|---|--------|--------|----------|
+| 🏠 | WIP | [ULTIMATE Proxmox Hypervisor](guides/how-to_ultimate_proxmox.md) | ZFS, cloud-init, Portainer, Plex, K3s, Ansible |
+| 🎮 | WIP | [ULITMATE Self-Hosted Gamer Server](guides/how-to_game_servers.md) | Pterodactyl, Satisfactory, Palworld, ARK, Minecraft; [scripts](scripts/local-game-servers/README.md) |
+| 🔒 | WIP | [Remotely Access via Cloudflare](guides/how-to_cloudflare.md) | Tunnels, SASE/Zero-trust, MFA, Authelia |
+| 🔥 | WIP | [PfSense NG-FW + VLANs](guides/how-to_pfsense.md) | VLANs, firewall, HAProxy |
+| 📦 | WIP | [S3 / MinIO Object Storage](guides/how-to_s3-minio.md) | Self-hosted S3, rclone, game save backups |
+| 📝 | WIP | [Ghost Blog (security-hardened)](guides/how-to_ghost_blog.md) | Docker/Portainer, DNS, firewall |
+| 🤖 | WIP | [All Things AI](guides/how-to_AI.md) | Ollama, Conda, PyTorch, CUDA |
+| 🌐 | WIP | [Certbot](guides/how-to_certbot.md) | Let's Encrypt, webroot vs standalone, Docker |
+| 📺 | WIP | [24-7 Youtube Livestream](guides/how-to_24-7_livestream.md) | RSS/RTSP, Ant Media Server, OBS |
+| 📋 | WIP | [Focalboard](guides/how-to_focalboard.md) | Focalboard + Certbot, Docker Compose |
+| ⛏️ | WIP | [Flux Node on Proxmox](guides/how-to_flux_proxmox_node.md) | Flux node (links to pfSense) |
+| ⚖️ | WIP | [Kemp Load-balancer](guides/how-to_kemp_loadmaster.md) | Enterprise load balancer (OVF/SCP) |
+| 🐍 | WIP | [Jupyter Lab](guides/how-to-jupyter-lab.md) | JupyterLab (references cloud-init) |
+| 🪙 | WIP | [Neoxa Mining VM](guides/how-to_neoxa_node.md) | Neoxa wallet, mining node |
+| 📧 | Incomplete | [Email Server](guides/how-to-email-server.md) | Mailcow/VPS (draft; reverse DNS / static IP) |
+| ☁️ | Incomplete | [Google Cloud VM](guides/how-to-google-cloud-vm.md) | GCP free tier (partial) |
+| 📌 | Other | [My Homelab Projects](guides/my_homelab_projects.md) | Checklist and links |
+
+Full glossary and cross-references: **[guides/README.md](guides/README.md)**.
+
+### Scripts (by folder)
+
+|  | Folder | What’s inside | README |
+|---|--------|----------------|--------|
+| 🎮 | [local-game-servers](scripts/local-game-servers/README.md) | Palworld, Satisfactory — SteamCMD, UFW, systemd, save import/export | [README](scripts/local-game-servers/README.md) |
+| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (secops) | [README](scripts/security/README.md) |
+| 🎯 | [wireguard](scripts/wireguard/README.md) | WireGuard VPN — standalone script + cloud-init | [README](scripts/wireguard/README.md) |
+| 🔑 | [github](scripts/github/README.md) | Git/GitHub auth — WSL2 + `gh` OAuth in Windows browser | [README](scripts/github/README.md) |
+
+Index and wget examples: **[scripts/README.md](scripts/README.md)**.
 
 ## Scripts: trust-but-verify mindset
 

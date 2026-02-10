@@ -364,8 +364,15 @@ systemctl daemon-reload
 
 echo "• Enabling palworld service to start automatically on boot..."
 systemctl enable palworld.service
+echo "  (Service will start automatically on boot; no manual start needed after reboot.)"
 
-echo "✓ Systemd service created and enabled successfully"
+echo "• Starting palworld service..."
+systemctl start palworld.service
+
+echo "✓ Systemd service created, enabled, and started"
+echo ""
+echo "Service status:"
+systemctl status palworld.service --no-pager || true
 echo ""
 echo "Service management commands:"
 echo "  Start server:   sudo systemctl start palworld"
@@ -503,8 +510,8 @@ echo "• View live logs:    sudo tail -f /var/log/palworld.log"
 echo "• Restart server:    sudo systemctl restart palworld"
 echo ""
 echo "Next Steps:"
-echo "1. Start your server: sudo systemctl start palworld"
-echo "2. Check that it's running: sudo systemctl status palworld"
+echo "1. Server is starting; wait 2-5 minutes for full readiness (check logs for 'Server listening')"
+echo "2. Check status: sudo systemctl status palworld"
 echo "3. Monitor the logs for any issues: sudo tail -f /var/log/palworld.log"
 echo "4. In Palworld, go to 'Join Multiplayer Game' → 'Join via IP'"
 echo "5. Enter your Ubuntu VM's IP address (find with: ip addr show)"
