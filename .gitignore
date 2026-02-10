@@ -1,0 +1,60 @@
+# PM workspace (never delete the directory; keep it out of VCS and build contexts)
+/pm/
+/pm/*
+/tests/
+/tests/*
+/tmpdata/
+/debug/
+logs/
+**/*.log
+
+# Secrets and local env (keep env.example / env.local.example tracked)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Rust
+/target/
+
+# Node / TypeScript
+node_modules/
+dist/
+build/
+.next/
+coverage/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+*.egg-info/
+*.egg
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Pre-commit / prek cache (local dev)
+.pre-commit-cache/
+~/.cache/prek/
+
+# Build and caches (general)
+*.log
+*.tmp
+.cache/

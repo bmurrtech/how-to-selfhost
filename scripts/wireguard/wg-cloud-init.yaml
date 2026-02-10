@@ -1,0 +1,147 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+ssh_pwauth: false
+disable_root: true
+
+packages:
+  - curl
+  - wget
+  - qrencode
+  - wireguard-tools
+
+write_files:
+  - path: /opt/wg-selfhost.sh
+    owner: root:root
+    permissions: '0750'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      export DEBIAN_FRONTEND=noninteractive
+
+      # --- Pre-flight apt lock check ---
+      echo "[INFO] Checking for active package operations..."
+      if sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; then
+          echo "[WARN] Another process (probably cloud-init) is running apt-get."
+          echo "       This happens on fresh instances while Ubuntu is still updating."
+          echo "       Please wait for it to finish before running this script."
+          echo
+          echo "Check progress with:"
+          echo "    sudo tail -f /var/log/cloud-init-output.log"
+          echo
+          echo "Or see apt processes:"
+          echo "    ps -fp \$(sudo fuser /var/lib/dpkg/lock-frontend 2>/dev/null)"
+          exit 1
+      fi
+
+      DEFAULT_USER="$(id -nu 1000 2>/dev/null || echo ubuntu)"
+      USER_HOME="$(getent passwd "$DEFAULT_USER" | cut -d: -f6)"
+      WG_DIR="$USER_HOME/.wireguard"
+      SERVER_PORT=51820
+      SERVER_IP=$(curl -s http://checkip.amazonaws.com || hostname -I | awk '{print $1}')
+
+      echo "[INFO] Installing WireGuard..."
+      apt-get update -y
+      apt-get install -y wireguard wireguard-tools qrencode
+
+      echo "[INFO] Generating server keys..."
+      SERVER_PRIV_KEY=$(wg genkey)
+      SERVER_PUB_KEY=$(echo "$SERVER_PRIV_KEY" | wg pubkey)
+
+      mkdir -p /etc/wireguard
+      umask 077
+      cat > /etc/wireguard/wg0.conf <<EOF
+      [Interface]
+      Address = 10.7.0.1/24
+      SaveConfig = true
+      PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+      PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+      ListenPort = $SERVER_PORT
+      PrivateKey = $SERVER_PRIV_KEY
+      EOF
+
+      chmod 600 /etc/wireguard/wg0.conf
+      systemctl enable wg-quick@wg0
+      systemctl start wg-quick@wg0
+
+      echo "[INFO] Creating client storage..."
+      mkdir -p "$WG_DIR"
+      chmod 700 "$WG_DIR"
+      chown "$DEFAULT_USER":"$DEFAULT_USER" "$WG_DIR"
+
+      # Helper: add client
+      cat > /usr/local/sbin/wg-add <<'EOC'
+      #!/bin/bash
+      CLIENT="$1"
+      [ -z "$CLIENT" ] && { echo "Usage: sudo wg-add <client-name>"; exit 1; }
+      CLIENT_PRIV_KEY=$(wg genkey)
+      CLIENT_PUB_KEY=$(echo "$CLIENT_PRIV_KEY" | wg pubkey)
+      CLIENT_PSK=$(wg genpsk)
+      SERVER_PUB_KEY=$(grep PrivateKey /etc/wireguard/wg0.conf | awk '{print $3}' | wg pubkey)
+      SERVER_IP=$(curl -s http://checkip.amazonaws.com || hostname -I | awk '{print $1}')
+      SERVER_PORT=$(grep ListenPort /etc/wireguard/wg0.conf | awk '{print $3}')
+      LAST_IP=$(grep AllowedIPs /etc/wireguard/wg0.conf | awk '{print $3}' | cut -d'.' -f4 | cut -d'/' -f1 | sort -n | tail -n1)
+      NEXT_IP=$((LAST_IP + 1))
+
+      cat >> /etc/wireguard/wg0.conf <<EOP
+      # BEGIN_PEER $CLIENT
+      [Peer]
+      PublicKey = $CLIENT_PUB_KEY
+      PresharedKey = $CLIENT_PSK
+      AllowedIPs = 10.7.0.$NEXT_IP/32
+      # END_PEER $CLIENT
+EOP
+
+      cat > "$HOME/.wireguard/$CLIENT.conf" <<EOCFG
+      [Interface]
+      PrivateKey = $CLIENT_PRIV_KEY
+      Address = 10.7.0.$NEXT_IP/24
+      DNS = 1.1.1.1
+
+      [Peer]
+      PublicKey = $SERVER_PUB_KEY
+      PresharedKey = $CLIENT_PSK
+      Endpoint = $SERVER_IP:$SERVER_PORT
+      AllowedIPs = 0.0.0.0/0, ::/0
+EOCFG
+
+      chmod 600 "$HOME/.wireguard/$CLIENT.conf"
+      chown "$SUDO_USER":"$SUDO_USER" "$HOME/.wireguard/$CLIENT.conf"
+      systemctl restart wg-quick@wg0
+      echo "[INFO] Client '$CLIENT' added. Config stored in $HOME/.wireguard/$CLIENT.conf"
+      EOC
+
+      # Helper: show status
+      cat > /usr/local/sbin/wg-show <<'EOC'
+      #!/bin/bash
+      sudo wg show
+      EOC
+
+      # Helper: QR code
+      cat > /usr/local/sbin/wg-qr <<'EOC'
+      #!/bin/bash
+      CLIENT="$1"
+      [ -z "$CLIENT" ] && { echo "Usage: sudo wg-qr <client-name>"; exit 1; }
+      CONF="$HOME/.wireguard/$CLIENT.conf"
+      [ -f "$CONF" ] || { echo "Config not found: $CONF"; exit 1; }
+      qrencode -t ansiutf8 < "$CONF"
+      EOC
+
+      chmod 750 /usr/local/sbin/wg-*
+
+      # README
+      cat > "$USER_HOME/README-WG.txt" <<'EOF'
+      WireGuard VPN Management
+      ========================
+      1. Add a new client:       sudo wg-add <client-name>
+      2. Show status:            sudo wg-show
+      3. Generate QR code:       sudo wg-qr <client-name>
+      Configs stored in ~/.wireguard/
+      EOF
+      chown "$DEFAULT_USER":"$DEFAULT_USER" "$USER_HOME/README-WG.txt"
+
+runcmd:
+  - [ chmod, +x, /opt/wg-selfhost.sh ]
+  - [ bash, -lc, '/opt/wg-selfhost.sh' ]
+
+final_message: "WireGuard installed. See ~/README-WG.txt for usage."

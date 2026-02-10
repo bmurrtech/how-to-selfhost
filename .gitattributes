@@ -1,0 +1,5 @@
+# Force LF for scripts and docs (avoid Windows CRLF breakage)
+*.sh text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

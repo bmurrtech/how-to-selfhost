@@ -1,0 +1,22 @@
+# Never ship in build context
+/pm/
+/tests/
+node_modules/
+target/
+dist/
+build/
+.git/
+.gitignore
+*.log
+.env
+.env.*
+.venv/
+venv/
+__pycache__/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,66 @@
+# Necessary Kids Apps
+127.0.0.1 swc.autodesk.com
+127.0.0.1 safebrowsing.brave.com
+127.0.0.1 roblox-api.arkoselabs.com
+127.0.0.1 images.rbxcdn.com
+127.0.0.1 resources.ereflect.comimages.ctfassets.net
+127.0.0.1 cdn.jsdeliver.net
+127.0.0.1 config.edge.skype.com
+127.0.0.1 msedge.api.cdp.microsoft.com
+127.0.0.1 fonts.googleapis.com
+127.0.0.1 ipv6.msftncsi.com
+127.0.0.1 tracking.epicgames.com
+127.0.0.1 cloudsync-prod.s3.amazonaws.com
+127.0.0.1 googleapis.l.google.com
+127.0.0.1 oauthaccountmanager.googleapis.com
+127.0.0.1 gdlp01.c-wss.com
+127.0.0.1 services.gfe.nvidia.com
+127.0.0.1 accounts.google.com
+127.0.0.1 apis.google.com
+127.0.0.1 x1.c.lencr.org
+127.0.0.1 autodesk.com
+127.0.0.1 autodesk.net
+127.0.0.1 tiqcdn.com
+127.0.0.1 kidsafeseal.com
+127.0.0.1 launchdarkly.com
+127.0.0.1 recaptcha.net
+127.0.0.1 gstatic.com
+127.0.0.1 contentful.com
+127.0.0.1 bitwarden.com
+127.0.0.1 ntp.msn.com
+
+# Windows Updates
+127.0.0.1 fe2cr.update.microsoft.com
+127.0.0.1 client.wns.windows.com
+127.0.0.1 ctdl.windowsupdate.com
+127.0.0.1 dl.delivery.mp.microsoft.com
+127.0.0.1 msedge.b.tlu.dl.delivery.mp.microsoft.com
+127.0.0.1 deff.nelreports.net
+127.0.0.1 aefd.nelreports.net
+127.0.0.1 aefd.nelreports.net
+127.0.0.1 v20.events.data.microsoft.com
+127.0.0.1 v10.events.data.microsoft.com
+127.0.0.1 i.s-microsoft.com
+127.0.0.1 sls.update.microsoft.com.akadns.net
+127.0.0.1 fe3.delivery.dsp.mp.microsoft.com.nsatc.net
+127.0.0.1 tlu.dl.delivery.mp.microsoft.com
+127.0.0.1 disk501.prod.do.dsp.mp.microsoft.com
+127.0.0.1 geover.prod.do.dsp.mp.microsoft.com
+127.0.0.1 kf501.prod.do.dsp.mp.microsoft.com
+
+# Wildcard Whitelist
+127.0.0.1 (\.|^)roblox\.com$
+127.0.0.1 (\.|^)typesy\.com$
+127.0.0.1 (\.|^)youtubekids\.com$
+127.0.0.1 (\.|^)rbxcdn\.com$
+127.0.0.1 (\.|^)autodesk\.com$
+127.0.0.1 (\.|^)launchdarkly\.com$
+127.0.0.1 (\.|^)recaptcha\.net$
+127.0.0.1 (\.|^)tiqcdn\.com$
+127.0.0.1 (\.|^)gstatic\.com$
+127.0.0.1 (\.|^)kidsafeseal\.com$
+127.0.0.1 (\.|^)autodesk\.net$
+127.0.0.1 (\.|^)contentful\.com$
+127.0.0.1 (\.|^)bitwarden\.com$
+127.0.0.1 (\.|^)apple\.com$
+127.0.0.1 (\.|^)microsoft\.com$
