@@ -83,6 +83,12 @@ fi
 
 echo "Using steam user: $(id steam -u) ($(id steam -g))"
 
+# Optional: PALWORLD_PRESET=casual|normal|hard|hardcore (set by palworld-casual.sh etc.)
+PALWORLD_PRESET="${PALWORLD_PRESET:-}"
+if [[ -n "$PALWORLD_PRESET" ]]; then
+  echo "Preset mode: $PALWORLD_PRESET"
+fi
+
 #############################################
 # 3. Installation Directory Setup
 #############################################
@@ -173,66 +179,98 @@ else
 fi
 
 #############################################
-# 7. Generate Configuration Files (Optional)
+# 7. Configuration directory and settings BEFORE first world (required)
 #############################################
+# These settings cannot be applied after the world is created. We create the config
+# directory and set them before the server ever starts.
 
 echo ""
-echo "Checking for Palworld configuration files..."
+echo "Preparing configuration (must be set before first server start)..."
 
 CONFIG_DIR="$INSTALL_DIR/Pal/Saved/Config/LinuxServer"
-if [ -d "$CONFIG_DIR" ]; then
-  echo "✓ Configuration directory already exists: $CONFIG_DIR"
-else
-  echo "✗ Configuration directory not found"
-  echo ""
-  echo "To generate default configuration files, we need to run the server briefly."
-  echo "This will create the config directory structure and default settings."
-  echo ""
-  read -p "Run server briefly to generate configs? (recommended) [Y/n]: " do_first_run
+mkdir -p "$CONFIG_DIR"
 
-  if [[ "${do_first_run:-y}" =~ ^[Yy] ]]; then
-    echo ""
-    echo "Starting Palworld server briefly to generate configuration files..."
-    echo "The server will start and you'll see initialization messages."
-    echo "Press Ctrl+C when you see 'Server listening' or after ~60 seconds."
-    echo "This is normal and expected - we're just generating the config files."
-    echo ""
-
-    # Run server briefly and capture the PID so we can show it's running
-    (cd "$INSTALL_DIR" && sudo -u steam ./PalServer.sh -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS) &
-    SERVER_PID=$!
-
-    echo "Server started with PID: $SERVER_PID"
-    echo "Waiting 45 seconds for initialization (or press Ctrl+C to stop earlier)..."
-
-    # Wait for either user interrupt or timeout
-    trap "echo 'Stopping server...'; kill $SERVER_PID 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true" INT
-    sleep 45
-    trap - INT
-
-    # Clean up the server process
-    if kill -0 $SERVER_PID 2>/dev/null; then
-      echo "Stopping server process..."
-      kill $SERVER_PID 2>/dev/null || true
-      wait $SERVER_PID 2>/dev/null || true
-    fi
-
-    echo "✓ Server stopped. Checking if config directory was created..."
-
-    if [ -d "$CONFIG_DIR" ]; then
-      echo "✓ Configuration directory created successfully: $CONFIG_DIR"
-    else
-      echo "⚠ Configuration directory still not found. You may need to run the server manually later."
-    fi
-  else
-    echo "Skipping config generation. You can run the server manually later to create configs."
-  fi
+if [ ! -f "$CONFIG_DIR/PalWorldSettings.ini" ] && [ -f "$INSTALL_DIR/DefaultPalWorldSettings.ini" ]; then
+  echo "• Copying default configuration..."
+  cp "$INSTALL_DIR/DefaultPalWorldSettings.ini" "$CONFIG_DIR/PalWorldSettings.ini"
+  chown steam:steam "$CONFIG_DIR/PalWorldSettings.ini"
+  echo "✓ Default configuration created"
+elif [ -f "$CONFIG_DIR/PalWorldSettings.ini" ]; then
+  echo "✓ Configuration file already exists"
 fi
+
+# If preset mode, write preset INI and skip interactive before-world prompts
+if [[ -n "$PALWORLD_PRESET" ]] && [[ "$PALWORLD_PRESET" =~ ^(casual|normal|hard|hardcore)$ ]]; then
+  CONFIG_FILE="$CONFIG_DIR/PalWorldSettings.ini"
+  case "$PALWORLD_PRESET" in
+    casual)   OPTIONS="ServerName=\"My Palworld Server\",ServerDescription=\"\",ServerPassword=\"\",AdminPassword=\"\",ServerPlayerMaxNum=16,ChatPostLimitPerMinute=10,bIsShowJoinLeftMessage=True,bAllowClientMod=False,bIsUseBackupSaveData=False,CrossplayPlatforms=\"(Steam,Xbox,PS5,Mac)\",bIsPvP=False,DeathPenalty=None,bPalLost=False,BlockRespawnTime=60.000000,bEnableInvaderEnemy=True,DayTimeSpeedRate=1.000000,NightTimeSpeedRate=1.000000,ExpRate=2.000000,PalCaptureRate=1.500000,PalSpawnNumRate=1.000000,PalDamageRateAttack=1.000000,PalDamageRateDefense=1.000000,PlayerDamageRateAttack=1.000000,PlayerDamageRateDefense=1.000000,PlayerStomachDecreaceRate=0.500000,PlayerStaminaDecreaceRate=0.500000,PlayerAutoHPRegeneRate=1.500000,PlayerAutoHpRegeneRateInSleep=1.500000,PalStomachDecreaceRate=0.500000,PalStaminaDecreaceRate=0.500000,PalAutoHPRegeneRate=1.500000,PalAutoHpRegeneRateInSleep=3.000000,BuildObjectDamageRate=0.500000,BuildObjectDeteriorationDamageRate=0.000000,CollectionDropRate=2.000000,CollectionObjectHpRate=1.000000,CollectionObjectRespawnSpeedRate=1.000000,EnemyDropItemRate=2.000000,DropItemMaxNum=3000,DropItemAliveMaxHours=1.000000,BaseCampMaxNum=128,BaseCampWorkerMaxNum=15,BaseCampMaxNumInGuild=6,GuildPlayerMaxNum=20,bAutoResetGuildNoOnlinePlayers=False,AutoResetGuildTimeNoOnlinePlayers=72.000000,MaxBuildingLimitNum=10000,bEnableFastTravel=True,bEnableFastTravelOnlyBaseCamp=False,bIsStartLocationSelectByMap=True,bExistPlayerAfterLogout=False,bHardcore=False,bShowPlayerList=True,bAllowGlobalPalboxExport=True,bAllowGlobalPalboxImport=False,RandomizerType=None,RandomizerSeed=\"\",bIsRandomizerPalLevelRandom=False,PalEggDefaultHatchingTime=1.000000,SupplyDropSpan=200,WorkSpeedRate=1.000000,ItemWeightRate=0.500000,EquipmentDurabilityDamageRate=1.000000,ItemCorruptionMultiplier=1.000000,ServerReplicatePawnCullDistance=15000.000000,RESTAPIEnabled=False" ;;
+    normal)   OPTIONS="ServerName=\"My Palworld Server\",ServerDescription=\"\",ServerPassword=\"\",AdminPassword=\"\",ServerPlayerMaxNum=16,ChatPostLimitPerMinute=10,bIsShowJoinLeftMessage=True,bAllowClientMod=False,bIsUseBackupSaveData=False,CrossplayPlatforms=\"(Steam,Xbox,PS5,Mac)\",bIsPvP=False,DeathPenalty=Item,bPalLost=False,BlockRespawnTime=300.000000,bEnableInvaderEnemy=True,DayTimeSpeedRate=1.000000,NightTimeSpeedRate=1.000000,ExpRate=5.000000,PalCaptureRate=2.000000,PalSpawnNumRate=1.500000,PalDamageRateAttack=1.500000,PalDamageRateDefense=1.500000,PlayerDamageRateAttack=2.000000,PlayerDamageRateDefense=1.000000,PlayerStomachDecreaceRate=1.000000,PlayerStaminaDecreaceRate=1.000000,PlayerAutoHPRegeneRate=1.000000,PlayerAutoHpRegeneRateInSleep=1.000000,PalStomachDecreaceRate=0.500000,PalStaminaDecreaceRate=0.500000,PalAutoHPRegeneRate=1.000000,PalAutoHpRegeneRateInSleep=3.000000,BuildObjectDamageRate=1.000000,BuildObjectDeteriorationDamageRate=0.000000,CollectionDropRate=2.000000,CollectionObjectHpRate=2.000000,CollectionObjectRespawnSpeedRate=1.000000,EnemyDropItemRate=2.000000,DropItemMaxNum=3000,DropItemAliveMaxHours=1.000000,BaseCampMaxNum=128,BaseCampWorkerMaxNum=30,BaseCampMaxNumInGuild=6,GuildPlayerMaxNum=20,bAutoResetGuildNoOnlinePlayers=False,AutoResetGuildTimeNoOnlinePlayers=72.000000,MaxBuildingLimitNum=10000,bEnableFastTravel=True,bEnableFastTravelOnlyBaseCamp=False,bIsStartLocationSelectByMap=True,bExistPlayerAfterLogout=False,bHardcore=False,bShowPlayerList=True,bAllowGlobalPalboxExport=True,bAllowGlobalPalboxImport=False,RandomizerType=None,RandomizerSeed=\"\",bIsRandomizerPalLevelRandom=False,PalEggDefaultHatchingTime=1.000000,SupplyDropSpan=200,WorkSpeedRate=1.000000,ItemWeightRate=0.500000,EquipmentDurabilityDamageRate=1.000000,ItemCorruptionMultiplier=1.000000,ServerReplicatePawnCullDistance=15000.000000,RESTAPIEnabled=False" ;;
+    hard)     OPTIONS="ServerName=\"My Palworld Server\",ServerDescription=\"\",ServerPassword=\"\",AdminPassword=\"\",ServerPlayerMaxNum=16,ChatPostLimitPerMinute=10,bIsShowJoinLeftMessage=True,bAllowClientMod=False,bIsUseBackupSaveData=False,CrossplayPlatforms=\"(Steam,Xbox,PS5,Mac)\",bIsPvP=False,DeathPenalty=ItemAndEquipment,bPalLost=False,BlockRespawnTime=600.000000,bEnableInvaderEnemy=True,DayTimeSpeedRate=1.000000,NightTimeSpeedRate=1.000000,ExpRate=1.000000,PalCaptureRate=0.500000,PalSpawnNumRate=1.000000,PalDamageRateAttack=2.000000,PalDamageRateDefense=0.500000,PlayerDamageRateAttack=0.500000,PlayerDamageRateDefense=2.000000,PlayerStomachDecreaceRate=2.000000,PlayerStaminaDecreaceRate=2.000000,PlayerAutoHPRegeneRate=0.500000,PlayerAutoHpRegeneRateInSleep=0.500000,PalStomachDecreaceRate=1.000000,PalStaminaDecreaceRate=1.000000,PalAutoHPRegeneRate=0.500000,PalAutoHpRegeneRateInSleep=1.000000,BuildObjectDamageRate=2.000000,BuildObjectDeteriorationDamageRate=1.000000,CollectionDropRate=0.500000,CollectionObjectHpRate=2.000000,CollectionObjectRespawnSpeedRate=2.000000,EnemyDropItemRate=0.500000,DropItemMaxNum=2000,DropItemAliveMaxHours=0.500000,BaseCampMaxNum=64,BaseCampWorkerMaxNum=10,BaseCampMaxNumInGuild=4,GuildPlayerMaxNum=20,bAutoResetGuildNoOnlinePlayers=True,AutoResetGuildTimeNoOnlinePlayers=24.000000,MaxBuildingLimitNum=2000,bEnableFastTravel=True,bEnableFastTravelOnlyBaseCamp=True,bIsStartLocationSelectByMap=True,bExistPlayerAfterLogout=False,bHardcore=False,bShowPlayerList=True,bAllowGlobalPalboxExport=False,bAllowGlobalPalboxImport=False,RandomizerType=None,RandomizerSeed=\"\",bIsRandomizerPalLevelRandom=False,PalEggDefaultHatchingTime=72.000000,SupplyDropSpan=300,WorkSpeedRate=0.500000,ItemWeightRate=2.000000,EquipmentDurabilityDamageRate=2.000000,ItemCorruptionMultiplier=2.000000,ServerReplicatePawnCullDistance=10000.000000,RESTAPIEnabled=False" ;;
+    hardcore) OPTIONS="ServerName=\"My Palworld Server\",ServerDescription=\"\",ServerPassword=\"\",AdminPassword=\"\",ServerPlayerMaxNum=16,ChatPostLimitPerMinute=10,bIsShowJoinLeftMessage=True,bAllowClientMod=False,bIsUseBackupSaveData=True,CrossplayPlatforms=\"(Steam,Xbox,PS5,Mac)\",bIsPvP=False,DeathPenalty=All,bPalLost=True,BlockRespawnTime=0.000000,bEnableInvaderEnemy=True,DayTimeSpeedRate=1.000000,NightTimeSpeedRate=1.000000,ExpRate=0.500000,PalCaptureRate=0.500000,PalSpawnNumRate=1.000000,PalDamageRateAttack=2.000000,PalDamageRateDefense=0.500000,PlayerDamageRateAttack=0.500000,PlayerDamageRateDefense=2.000000,PlayerStomachDecreaceRate=2.000000,PlayerStaminaDecreaceRate=2.000000,PlayerAutoHPRegeneRate=0.200000,PlayerAutoHpRegeneRateInSleep=0.500000,PalStomachDecreaceRate=1.000000,PalStaminaDecreaceRate=1.000000,PalAutoHPRegeneRate=0.200000,PalAutoHpRegeneRateInSleep=0.500000,BuildObjectDamageRate=2.000000,BuildObjectDeteriorationDamageRate=2.000000,CollectionDropRate=0.500000,CollectionObjectHpRate=2.000000,CollectionObjectRespawnSpeedRate=2.000000,EnemyDropItemRate=0.500000,DropItemMaxNum=1500,DropItemAliveMaxHours=0.500000,BaseCampMaxNum=32,BaseCampWorkerMaxNum=10,BaseCampMaxNumInGuild=3,GuildPlayerMaxNum=10,bAutoResetGuildNoOnlinePlayers=True,AutoResetGuildTimeNoOnlinePlayers=12.000000,MaxBuildingLimitNum=500,bEnableFastTravel=False,bEnableFastTravelOnlyBaseCamp=True,bIsStartLocationSelectByMap=False,bExistPlayerAfterLogout=True,bHardcore=True,bCharacterRecreateInHardcore=True,bShowPlayerList=True,bAllowGlobalPalboxExport=False,bAllowGlobalPalboxImport=False,RandomizerType=None,RandomizerSeed=\"\",bIsRandomizerPalLevelRandom=False,PalEggDefaultHatchingTime=120.000000,SupplyDropSpan=600,WorkSpeedRate=0.500000,ItemWeightRate=2.000000,EquipmentDurabilityDamageRate=2.000000,ItemCorruptionMultiplier=2.000000,ServerReplicatePawnCullDistance=8000.000000,RESTAPIEnabled=False" ;;
+  esac
+  printf '%s\n' "[/Script/Pal.PalGameWorldSettings]" "OptionSettings=($OPTIONS)" > "$CONFIG_FILE"
+  chown steam:steam "$CONFIG_FILE"
+  echo "✓ Preset '$PALWORLD_PRESET' written to PalWorldSettings.ini"
+else
+echo ""
+echo "Settings that apply only BEFORE world creation (cannot be changed later):"
+echo "  Random Pal Mode, Randomizer Seed, Random Pal levels, Hardcore, Hardcore Pal loss, Character recreate in Hardcore."
+read -p "Set these now? [Y/n]: " set_before_world
+if [[ ! "${set_before_world:-y}" =~ ^[Nn] ]]; then
+  CONFIG_FILE="$CONFIG_DIR/PalWorldSettings.ini"
+  read -p "Random Pal Mode (None / Region / All) [None]: " RAND_TYPE
+  RAND_TYPE="${RAND_TYPE:-None}"
+  read -p "Randomizer seed (string, e.g. tomato or t3i4mgut; leave empty if None): " RAND_SEED
+  read -p "Wild Pal levels fully random (y/N): " RAND_LEVEL
+  RAND_LEVEL="${RAND_LEVEL:-n}"
+  read -p "Hardcore mode - no respawn on death (y/N): " HARDCORE
+  HARDCORE="${HARDCORE:-n}"
+  read -p "Hardcore Pal mode - lose Pals on death (requires Hardcore) (y/N): " PAL_LOST
+  PAL_LOST="${PAL_LOST:-n}"
+  read -p "Allow character recreate in Hardcore (Y/n): " CHAR_RECREATE
+  CHAR_RECREATE="${CHAR_RECREATE:-y}"
+  # Apply via sed (OptionSettings= line)
+  [[ "$RAND_TYPE" =~ ^[Rr]egion$ ]] && RAND_TYPE="Region" || { [[ "$RAND_TYPE" =~ ^[Aa]ll$ ]] && RAND_TYPE="All"; } || RAND_TYPE="None"
+  [[ "$RAND_LEVEL" =~ ^[Yy] ]] && RAND_LEVEL="True" || RAND_LEVEL="False"
+  [[ "$HARDCORE" =~ ^[Yy] ]] && HARDCORE="True" || HARDCORE="False"
+  [[ "$PAL_LOST" =~ ^[Yy] ]] && PAL_LOST="True" || PAL_LOST="False"
+  [[ "$CHAR_RECREATE" =~ ^[Nn] ]] && CHAR_RECREATE="False" || CHAR_RECREATE="True"
+  sed -i "s/RandomizerType=[^,)]*/RandomizerType=$RAND_TYPE/" "$CONFIG_FILE" 2>/dev/null || true
+  sed -i "s/RandomizerSeed=\"[^\"]*\"/RandomizerSeed=\"$RAND_SEED\"/" "$CONFIG_FILE" 2>/dev/null || true
+  sed -i "s/bIsRandomizerPalLevelRandom=[^,)]*/bIsRandomizerPalLevelRandom=$RAND_LEVEL/" "$CONFIG_FILE" 2>/dev/null || true
+  sed -i "s/bHardcore=[^,)]*/bHardcore=$HARDCORE/" "$CONFIG_FILE" 2>/dev/null || true
+  sed -i "s/bPalLost=[^,)]*/bPalLost=$PAL_LOST/" "$CONFIG_FILE" 2>/dev/null || true
+  sed -i "s/bCharacterRecreateInHardcore=[^,)]*/bCharacterRecreateInHardcore=$CHAR_RECREATE/" "$CONFIG_FILE" 2>/dev/null || true
+  echo "✓ Before-world settings written. Start the server only after this."
+else
+  echo "Skipped. You can set these in PalWorldSettings.ini before first start, or use a preset script (e.g. palworld-hardcore.sh)."
+fi
+fi
+# end if not preset
 
 #############################################
 # 8. Server Configuration (PalWorldSettings.ini)
 #############################################
 
+if [ -n "$PALWORLD_CUSTOM" ]; then
+  echo ""
+  echo "Custom mode: running full configuration wizard (config-palworld.sh) before first server start..."
+  CONFIG_SCRIPT="$(cd "$(dirname "$0")" && pwd)/config-palworld.sh"
+  if [ -x "$CONFIG_SCRIPT" ]; then
+    PAL_INSTALL_DIR="$INSTALL_DIR" PALWORLD_CONFIG_NO_START=1 "$CONFIG_SCRIPT"
+  else
+    echo "⚠ config-palworld.sh not found at $CONFIG_SCRIPT; configure manually after install (sudo ./config-palworld.sh)."
+  fi
+  echo ""
+  echo "WARNING: Only enable REST API for LAN. Publishing to the Internet may result in unauthorized manipulation."
+  read -p "Enable REST API (RESTAPIEnabled=True)? [N/y]: " enable_rest_api
+  REST_API_ENABLED="False"
+  [[ "${enable_rest_api:-n}" =~ ^[Yy] ]] && REST_API_ENABLED="True"
+  CONFIG_FILE="$CONFIG_DIR/PalWorldSettings.ini"
+  if grep -q "RESTAPIEnabled" "$CONFIG_FILE" 2>/dev/null; then
+    sed -i "s/RESTAPIEnabled=[^,)]*/RESTAPIEnabled=$REST_API_ENABLED/" "$CONFIG_FILE" 2>/dev/null && echo "✓ REST API set to $REST_API_ENABLED"
+  fi
+else
 echo ""
 echo "Configuring Palworld server settings..."
 
@@ -260,13 +298,45 @@ else
   echo "You can customize your server name, password, admin password, and player limits."
   echo "These settings control how your server appears in the game browser."
 
-  read -p "Configure server settings now? [y/N]: " edit_name
-  if [[ "${edit_name:-n}" =~ ^[Yy] ]]; then
+  # Admin password: required for in-game admin commands (/AdminPassword, /Shutdown, /KickPlayer, etc.)
+  echo ""
+  echo "Admin password is required to run in-game admin commands (e.g. /AdminPassword, /Shutdown, /KickPlayer, /Save)."
+  echo "See: https://docs.palworldgame.com/settings-and-operation/commands"
+  read -p "Set admin password now? [Y/n] (n = skip; if skipped, admin commands will not work until you set it in PalWorldSettings.ini): " set_admin_pw
+  ADMIN_PW=""
+  if [[ ! "${set_admin_pw:-y}" =~ ^[Nn] ]]; then
+    read -p "Admin password: " ADMIN_PW
+  else
+    echo "Skipped. You can set AdminPassword later in $CONFIG_DIR/PalWorldSettings.ini and restart the server."
+  fi
+
+  # REST API: warn LAN-only
+  echo ""
+  echo "WARNING: Only enable REST API for LAN use. Publishing directly to the Internet may result in unauthorized manipulation of the server, which may interfere with play."
+  read -p "Enable REST API (RESTAPIEnabled=True)? [N/y]: " enable_rest_api
+  REST_API_ENABLED="False"
+  [[ "${enable_rest_api:-n}" =~ ^[Yy] ]] && REST_API_ENABLED="True"
+
+  CONFIG_FILE="$CONFIG_DIR/PalWorldSettings.ini"
+  if [ -n "$ADMIN_PW" ]; then
+    if sed -i "s/AdminPassword=\"[^\"]*\"/AdminPassword=\"$ADMIN_PW\"/" "$CONFIG_FILE" 2>/dev/null; then
+      echo "✓ Admin password set (use /AdminPassword <password> in-game to gain admin privileges)"
+    else
+      echo "⚠ Could not set Admin password in config; add AdminPassword= manually to $CONFIG_FILE"
+    fi
+  fi
+  if grep -q "RESTAPIEnabled" "$CONFIG_FILE" 2>/dev/null; then
+    sed -i "s/RESTAPIEnabled=[^,)]*/RESTAPIEnabled=$REST_API_ENABLED/" "$CONFIG_FILE" 2>/dev/null && echo "✓ REST API set to $REST_API_ENABLED"
+  else
+    echo "  (RESTAPIEnabled not in default config; enable later via config-palworld.sh or manual edit)"
+  fi
+
+  read -p "Configure other server settings now? [y/N]: " edit_name
+  if [[ -z "$PALWORLD_PRESET" ]] && [[ "${edit_name:-n}" =~ ^[Yy] ]]; then
     echo ""
     echo "Enter your server configuration:"
     read -p "Server name (how it appears in server list): " SERVER_NAME
     read -p "Server password (leave empty for public server): " SERVER_PW
-    read -p "Admin password (required for server administration): " ADMIN_PW
     read -p "Maximum players [8]: " MAX_PLAYERS
     MAX_PLAYERS="${MAX_PLAYERS:-8}"
 
@@ -317,6 +387,8 @@ else
     echo "  $CONFIG_DIR/PalWorldSettings.ini"
   fi
 fi
+fi
+# end if not PALWORLD_CUSTOM
 
 #############################################
 # 9. Systemd Service Configuration

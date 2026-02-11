@@ -1,10 +1,10 @@
 #!/bin/bash
-# palworld-save-import.sh — Import Palworld world save from a public URL (zip).
+# import-palworld-save.sh — Import Palworld world save from a public URL (zip).
 # Run on the game server (SSH or Proxmox console). Requires sudo. Depends: unzip, wget (installed automatically on Debian/Ubuntu).
-# Usage: sudo PAL_INSTALL_DIR=/home/steam/palserver ./palworld-save-import.sh [URL]
+# Usage: sudo PAL_INSTALL_DIR=/home/steam/palserver ./import-palworld-save.sh [URL]
 # If URL is omitted and stdin is a TTY, prompts for URL.
 # Zip should contain one world folder (Level.sav, LevelMeta.sav, etc.). Do not include WorldOption.sav (can override server config).
-# On Windows (Steam), saves live under %USERPROFILE%\AppData\Local\Pal\Saved\SaveGames — use that folder (or one world subfolder) to build the zip.
+# On Windows (Steam), saves live under %USERPROFILE%\AppData\Local\Pal\Saved\SaveGames — zip the specific world folder (see palworld/README.md).
 
 set -euo pipefail
 

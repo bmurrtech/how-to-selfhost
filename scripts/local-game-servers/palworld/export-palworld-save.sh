@@ -1,8 +1,8 @@
 #!/bin/bash
-# palworld-save-export.sh — Backup Palworld world save (local zip + optional rclone to cloud).
+# export-palworld-save.sh — Backup Palworld world save (local zip + optional rclone to cloud).
 # Run on the game server via SSH or Proxmox console. Requires sudo.
 # Set PALWORLD_BACKUP_REMOTE (e.g. minio:palworld-backups) to upload after backup.
-# Usage: sudo PALWORLD_BACKUP_REMOTE=minio:palworld-backups ./palworld-save-export.sh
+# Usage: sudo PALWORLD_BACKUP_REMOTE=minio:palworld-backups ./export-palworld-save.sh
 
 set -euo pipefail
 

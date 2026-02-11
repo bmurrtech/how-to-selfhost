@@ -8,7 +8,7 @@ Scripts to set up SteamCMD-based dedicated game servers (Satisfactory, Palworld,
 - **Local-first** — Favors self-hosting at home (LAN-only firewall) with optional cloud.
 - **Security-minded** — Hardens SSH, avoids open ports; favors tools like Tailscale where applicable.
 - **Wizard-style** — Interactive prompts; no need to edit scripts for common cases.
-- **Modular** — One folder per concern; game-specific scripts (Palworld, Satisfactory) as separate files.
+- **Modular** — One folder per game; game-specific scripts and install instructions live in each game’s folder.
 - **Central recipe** — Single place for dedicated game server automation (SteamCMD + systemd + UFW).
 
 Other repos often focus on: per-game SteamCMD snippets (no hardening), Docker images (no SSH/UFW automation), or UI panels (dashboards, not CLI automation). This repo aims at **recipe-driven CLI setup with secure defaults**, without requiring a full panel.
@@ -28,12 +28,22 @@ These scripts assume a **LAN-first** setup and do **not** require opening any po
 - **Admin access**: SSH from the LAN is supported with **password authentication enabled** (LAN-trusted model). If firewall or SSH changes ever lock you out, use the **Proxmox web UI → VM → Console** to log in and fix (no public ports needed).
 - **Security hardening**: Each script applies baseline hardening (UFW LAN-only, Fail2ban with RFC1918 whitelist, unattended-upgrades). Root SSH login is disabled; password auth remains on so you can manage the VM from the LAN without keys.
 
-## High-level overview (what each script does)
+## How to use (overview)
 
-| Script | Main actions (no secrets logged) |
-|--------|----------------------------------|
-| **satisfactory.sh** | Root: adds multiverse, i386, lib32gcc-s1; prompts LAN vs VPS firewall; configures UFW (LAN 192.168.1.0/24 or trusted IP + whitelist), optional LAN SSH (22/tcp); creates/adds steam user; installs steamcmd, SteamCMD app 1690800 (optional experimental); writes satisfactory.service; **bundled**: minimal SSH hardening (PermitRootLogin no), Fail2ban (RFC1918 whitelist), unattended-upgrades. |
-| **palworld.sh** | Root: steam user creation if missing; prompts install dir; apt install steamcmd + lib32gcc-s1; SteamCMD app 2394010; optional first run for config dirs; optional PalWorldSettings.ini; writes palworld.service; UFW from LAN CIDR (default 192.168.1.0/24) for game ports 8211, 27015, 27031–27036, optional LAN SSH (22/tcp); **bundled**: minimal SSH hardening, Fail2ban (RFC1918 whitelist), unattended-upgrades. |
+Each game has its own folder with scripts and a **game-specific README** that includes:
+
+- How to download the scripts (e.g. `wget` URLs)
+- Install and setup steps
+- Game-specific options (save import/export, server config, etc.)
+
+| Game         | Folder         | README |
+|-------------|----------------|--------|
+| Satisfactory | `satisfactory/` | [satisfactory/README.md](satisfactory/README.md) |
+| Palworld     | `palworld/`     | [palworld/README.md](palworld/README.md) |
+
+From the VM (SSH or Proxmox console), use the **How to download** section inside the README for the game you want (Satisfactory or Palworld). Each README lists the exact `wget` commands and run instructions for that game’s scripts.
+
+See the [Proxmox guide](../../guides/how-to_ultimate_proxmox.md) in the repo for creating a cloud-init VM and using the console.
 
 ## Prerequisites
 
@@ -41,55 +51,18 @@ These scripts assume a **LAN-first** setup and do **not** require opening any po
 - **Root/sudo**: Run with `sudo` (or as root) for package install, UFW, systemd, and security hardening.
 - **Access**: Use Proxmox console or SSH from the LAN. Port 22 is not opened to the internet; scripts can optionally allow SSH (22/tcp) from your LAN CIDR only.
 
-## How to download (wget)
-
-From the VM (SSH or Proxmox console):
-
-```bash
-# Satisfactory
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/satisfactory.sh -O satisfactory.sh
-chmod +x satisfactory.sh
-sudo ./satisfactory.sh
-
-# Palworld
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld.sh -O palworld.sh
-# Or use the short URL: https://tinyurl.com/47yr6kta
-# wget https://tinyurl.com/47yr6kta -O palworld.sh
-chmod +x palworld.sh
-sudo ./palworld.sh
-
-# Palworld Save Import Script
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld-save-import.sh -O palworld-save-import.sh
-# Or use the short URL: https://tinyurl.com/2fymkt75
-# wget https://tinyurl.com/2fymkt75 -O palworld-save-import.sh
-chmod +x palworld-save-import.sh
-sudo ./palworld-save-import.sh
-
-# Palworld Save Export Script
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld-save-export.sh -O palworld-save-export.sh
-# Or use the short URL: https://tinyurl.com/4vkkkex4
-# wget https://tinyurl.com/4vkkkex4 -O palworld-save-export.sh
-chmod +x palworld-save-export.sh
-sudo ./palworld-save-export.sh
-
-```
-
-See the [Proxmox guide](../../guides/how-to_ultimate_proxmox.md) in the repo for creating a cloud-init VM and using the console.
-
 ## Firewall model
 
 - **LAN-only (default for home)**: UFW allows game + Steam ports (and optionally SSH) only from a LAN CIDR (e.g. `192.168.1.0/24`). No ports are opened to the public internet; use Proxmox console or LAN SSH for management.
 - **Off-LAN access**: For remote play or management outside your network, use a VPN or tunnel (e.g. WireGuard, Tailscale, or playit.gg)—see the [Remote Connection Options](#remote-connection-options) table below. Do not expose game or SSH ports directly to the internet.
 - **VPS**: Roadmap.
 
-## Scripts
+## Scripts (by game)
 
-| Script            | Game        | Description |
-|------------------|-------------|-------------|
-| `satisfactory.sh` | Satisfactory | Full setup: multiverse, steam user, SteamCMD, UFW (LAN or VPS), systemd, SSH hardening, Fail2ban, unattended-upgrades. |
-| `palworld.sh`     | Palworld     | Install/update Palworld dedicated server, config, systemd, UFW for LAN, SSH hardening, Fail2ban, unattended-upgrades. |
-| `palworld-save-import.sh` | Palworld | Import world from public URL (wget, unzip; installs deps on Debian/Ubuntu); stops/restarts server. |
-| `palworld-save-export.sh` | Palworld | Backup save (local zip + optional rclone to `PALWORLD_BACKUP_REMOTE`); manual run. |
+| Game         | Scripts / description |
+|-------------|------------------------|
+| Satisfactory | `satisfactory.sh` — Full setup: multiverse, steam user, SteamCMD, UFW (LAN or VPS), systemd, SSH hardening, Fail2ban, unattended-upgrades. See [satisfactory/README.md](satisfactory/README.md). |
+| Palworld     | `palworld.sh`, `import-palworld-save.sh`, `export-palworld-save.sh`, `config-palworld.sh` — Install/update server, import/export saves, configure server settings. See [palworld/README.md](palworld/README.md). |
 
 ## Local troubleshooting (SteamCMD game servers)
 
@@ -154,84 +127,6 @@ sudo ufw status verbose | grep -E 'Status|8211|27015|7777|15000'
 | Client firewall / AV | Temporarily disable or add exception for game |
 | Version mismatch | Update game client and server to match |
 | Wrong port | Palworld: `IP:8211`. Satisfactory: `IP:7777` (or configured port) |
-
-## Palworld: World save management
-
-Paths below assume default install `/home/steam/palserver`. Server path: `.../Pal/Saved/SaveGames/0/<Folder>/`.
-
-### Where Palworld saves live (Windows, Steam)
-
-On Windows (Steam), saves are **not** under `steamapps/common/Palworld/Pal`. They are in your user profile:
-
-- **Direct path:** `C:\Users\<YourWindowsUsername>\AppData\Local\Pal\Saved\SaveGames`
-- **Shortcut (Explorer or Win+R):** `%USERPROFILE%\AppData\Local\Pal\Saved\SaveGames`
-
-Inside `SaveGames` you see subfolders for your Steam ID and world(s). Each world folder contains files such as `Level.sav`, `LevelMeta.sav`, `LocalData.sav`, and optionally `WorldOption.sav`. For **import or SCP**, use only the world folder contents and **do not include `WorldOption.sav`** (it can override server settings).
-
-**Zip structure for import:** Zip either (1) a single world folder (e.g. `F1E3DDE04D1F0D39F8245C8ABFACAFA2` with its contents) or (2) the contents of that folder at the zip root (`Level.sav`, `LevelMeta.sav`, `Players/`, etc.). The import script accepts both layouts.
-
-### Method A: SCP / SFTP (no cloud bucket)
-
-Use this if you prefer to copy files directly from your PC to the server without a cloud bucket or scripts.
-
-1. **Stop the server** (on the game server, SSH or Proxmox console):
-   ```bash
-   sudo systemctl stop palworld
-   ```
-
-2. **On your Windows PC**, your local save is under the path in “Where Palworld saves live (Windows)” above, e.g. `%USERPROFILE%\AppData\Local\Pal\Saved\SaveGames\<SteamID>\<WorldFolder>\`. (In-game: Start Game → select world → click folder icon to open that path.)
-
-3. **On the server**, save path is:
-   ```
-   /home/steam/palserver/Pal/Saved/SaveGames/0/<Folder>/
-   ```
-   If the server already created a world, there will be one folder (e.g. a long UUID). Replace that folder’s *contents* with your local save files, or create a new folder and upload into it (then set `DedicatedServerName` in config to that folder name).
-
-4. **Copy files** using one of:
-   - **WinSCP** or **FileZilla**: connect via SFTP to the server (user e.g. `steam` or your SSH user), navigate to the path above, upload the contents of your local world folder. Do **not** upload `WorldOption.sav` (it can override server settings).
-   - **PowerShell (SCP)**:
-     ```powershell
-     scp -r "C:\Users\YourName\AppData\Local\Pal\Saved\SaveGames\<SteamID>\<WorldFolder>\*" steam@192.168.1.234:/home/steam/palserver/Pal/Saved/SaveGames/0/<TargetFolder>/
-     ```
-     Replace IP and paths with your values.
-
-5. **Restart the server**:
-   ```bash
-   sudo systemctl start palworld
-   ```
-
-### Method B: Import from URL (palworld-save-import.sh)
-
-To use a zip from a public URL (e.g. GCP bucket, MinIO presigned URL):
-
-1. Put your world save in a zip (see “Zip structure for import” above; exclude `WorldOption.sav`). The script installs `unzip` and `wget` on Debian/Ubuntu if missing.
-2. Upload the zip to a publicly reachable URL (or use a presigned URL).
-3. On the game server:
-   ```bash
-   sudo ./palworld-save-import.sh "https://your-url/palworld-world.zip"
-   ```
-   Optional: `PAL_INSTALL_DIR=/home/steam/palserver` if you used a different install path.
-
-The script stops the server, downloads the zip, extracts to the save directory, fixes ownership, updates `DedicatedServerName` if needed, and restarts the server. On failure it prints recovery steps (restart manually or re-run the script).
-
-### Export / backup (palworld-save-export.sh)
-
-Manual backup (run on the game server via SSH or console):
-
-1. Optional: configure rclone and a remote (see [S3 / MinIO guide](../../guides/how-to_s3-minio.md)).
-2. Set the remote for uploads (optional):
-   ```bash
-   export PALWORLD_BACKUP_REMOTE=minio:palworld-backups
-   ```
-3. Run:
-   ```bash
-   sudo ./palworld-save-export.sh
-   ```
-   The script stops the server, creates a local backup copy, zips it, restarts the server, saves a zip locally, and if `PALWORLD_BACKUP_REMOTE` is set, uploads via rclone. On failure it does not restart the server and prints recovery instructions.
-
-### Roadmap
-
-- Cron job for automated backup to cloud (rclone) — roadmap.
 
 ## Alternative Management Platforms
 
