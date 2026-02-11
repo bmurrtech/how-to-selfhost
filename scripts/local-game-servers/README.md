@@ -88,7 +88,7 @@ See the [Proxmox guide](../../guides/how-to_ultimate_proxmox.md) in the repo for
 |------------------|-------------|-------------|
 | `satisfactory.sh` | Satisfactory | Full setup: multiverse, steam user, SteamCMD, UFW (LAN or VPS), systemd, SSH hardening, Fail2ban, unattended-upgrades. |
 | `palworld.sh`     | Palworld     | Install/update Palworld dedicated server, config, systemd, UFW for LAN, SSH hardening, Fail2ban, unattended-upgrades. |
-| `palworld-save-import.sh` | Palworld | Import world from public URL (wget, unzip); stops/restarts server. |
+| `palworld-save-import.sh` | Palworld | Import world from public URL (wget, unzip; installs deps on Debian/Ubuntu); stops/restarts server. |
 | `palworld-save-export.sh` | Palworld | Backup save (local zip + optional rclone to `PALWORLD_BACKUP_REMOTE`); manual run. |
 
 ## Local troubleshooting (SteamCMD game servers)
@@ -159,6 +159,17 @@ sudo ufw status verbose | grep -E 'Status|8211|27015|7777|15000'
 
 Paths below assume default install `/home/steam/palserver`. Server path: `.../Pal/Saved/SaveGames/0/<Folder>/`.
 
+### Where Palworld saves live (Windows, Steam)
+
+On Windows (Steam), saves are **not** under `steamapps/common/Palworld/Pal`. They are in your user profile:
+
+- **Direct path:** `C:\Users\<YourWindowsUsername>\AppData\Local\Pal\Saved\SaveGames`
+- **Shortcut (Explorer or Win+R):** `%USERPROFILE%\AppData\Local\Pal\Saved\SaveGames`
+
+Inside `SaveGames` you see subfolders for your Steam ID and world(s). Each world folder contains files such as `Level.sav`, `LevelMeta.sav`, `LocalData.sav`, and optionally `WorldOption.sav`. For **import or SCP**, use only the world folder contents and **do not include `WorldOption.sav`** (it can override server settings).
+
+**Zip structure for import:** Zip either (1) a single world folder (e.g. `F1E3DDE04D1F0D39F8245C8ABFACAFA2` with its contents) or (2) the contents of that folder at the zip root (`Level.sav`, `LevelMeta.sav`, `Players/`, etc.). The import script accepts both layouts.
+
 ### Method A: SCP / SFTP (no cloud bucket)
 
 Use this if you prefer to copy files directly from your PC to the server without a cloud bucket or scripts.
@@ -168,11 +179,7 @@ Use this if you prefer to copy files directly from your PC to the server without
    sudo systemctl stop palworld
    ```
 
-2. **On your Windows PC**, your local save is at:
-   ```
-   C:\Users\<You>\AppData\Local\Pal\Saved\SaveGames\<SteamID>\<WorldFolder>\
-   ```
-   (In-game: Start Game → select world → click folder icon to open that path.)
+2. **On your Windows PC**, your local save is under the path in “Where Palworld saves live (Windows)” above, e.g. `%USERPROFILE%\AppData\Local\Pal\Saved\SaveGames\<SteamID>\<WorldFolder>\`. (In-game: Start Game → select world → click folder icon to open that path.)
 
 3. **On the server**, save path is:
    ```
@@ -197,7 +204,7 @@ Use this if you prefer to copy files directly from your PC to the server without
 
 To use a zip from a public URL (e.g. GCP bucket, MinIO presigned URL):
 
-1. Put your world save in a zip (exclude `WorldOption.sav`).
+1. Put your world save in a zip (see “Zip structure for import” above; exclude `WorldOption.sav`). The script installs `unzip` and `wget` on Debian/Ubuntu if missing.
 2. Upload the zip to a publicly reachable URL (or use a presigned URL).
 3. On the game server:
    ```bash

@@ -1,8 +1,10 @@
 #!/bin/bash
 # palworld-save-import.sh — Import Palworld world save from a public URL (zip).
-# Run on the game server (SSH or Proxmox console). Requires sudo.
+# Run on the game server (SSH or Proxmox console). Requires sudo. Depends: unzip, wget (installed automatically on Debian/Ubuntu).
 # Usage: sudo PAL_INSTALL_DIR=/home/steam/palserver ./palworld-save-import.sh [URL]
-# If URL is omitted and stdin is a TTY, prompts for URL. Do not upload WorldOption.sav in the zip.
+# If URL is omitted and stdin is a TTY, prompts for URL.
+# Zip should contain one world folder (Level.sav, LevelMeta.sav, etc.). Do not include WorldOption.sav (can override server config).
+# On Windows (Steam), saves live under %USERPROFILE%\AppData\Local\Pal\Saved\SaveGames — use that folder (or one world subfolder) to build the zip.
 
 set -euo pipefail
 
@@ -55,6 +57,25 @@ if [[ "$EUID" -ne 0 ]]; then
   echo "This script must be run as root (sudo) to stop/start the service and set ownership."
   exit 1
 fi
+
+# Ensure unzip and wget are installed (required for download and extract)
+ensure_deps() {
+  local missing=()
+  command -v wget &>/dev/null  || missing+=(wget)
+  command -v unzip &>/dev/null || missing+=(unzip)
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    return 0
+  fi
+  if [[ -f /etc/debian_version ]] && command -v apt-get &>/dev/null; then
+    echo "Installing dependencies: ${missing[*]}..."
+    apt-get update -qq
+    apt-get install -y "${missing[@]}"
+  else
+    echo "Missing required commands: ${missing[*]}. Install them (e.g. on Debian/Ubuntu: sudo apt-get install -y ${missing[*]})."
+    exit 1
+  fi
+}
+ensure_deps
 
 if [[ ! -d "$SAVE_BASE" ]]; then
   echo "Save directory not found: $SAVE_BASE"
