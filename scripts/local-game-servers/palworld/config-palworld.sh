@@ -42,13 +42,13 @@ normalize_int() {
   return 1
 }
 
-# Accept 0/1, true/false, yes/no (case-insensitive)
+# Accept 1=Off/2=On, 0/1, true/false, yes/no, on/off (case-insensitive)
 normalize_bool() {
   local v
   v="$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
   case "$v" in
-    1|true|yes) echo "True"; return 0 ;;
-    0|false|no) echo "False"; return 0 ;;
+    2|true|yes|on) echo "True"; return 0 ;;
+    1|0|false|no|off) echo "False"; return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -93,8 +93,8 @@ prompt_float_range() {
     echo ""
     echo "--- $key ---"
     echo "  $desc"
-    echo "  Tip: $tip Range: $min - $max"
-    read -r -p "  [$key] ($default): " val
+    echo "  Options: number from $min to $max. Default: $default"
+    read -r -p "  Value ($min-$max, default $default): " val
     val="${val:-$default}"
     val="$(clamp_float "$val" "$min" "$max" 2>/dev/null)" && break
     echo "  Invalid. Enter a number between $min and $max (e.g. $default)."
@@ -110,8 +110,8 @@ prompt_int_range() {
     echo ""
     echo "--- $key ---"
     echo "  $desc"
-    echo "  Tip: $tip Range: $min - $max"
-    read -r -p "  [$key] ($default): " val
+    echo "  Options: integer from $min to $max. Default: $default"
+    read -r -p "  Value ($min-$max, default $default): " val
     val="${val:-$default}"
     val="$(normalize_int "$val" 2>/dev/null)" || true
     if [[ -n "$val" ]] && [[ "$val" -ge "$min" ]] && [[ "$val" -le "$max" ]]; then
@@ -130,11 +130,11 @@ prompt_bool() {
     echo ""
     echo "--- $key ---"
     echo "  $desc"
-    echo "  Tip: $tip"
-    read -r -p "  [$key] ($default): " val
+    echo "  Options: 1=Off 2=On (or off/on, 0/1, false/true). Default: $default"
+    read -r -p "  [1=Off 2=On] (default $default): " val
     val="${val:-$default}"
     out="$(normalize_bool "$val" 2>/dev/null)" && break
-    echo "  Invalid. Enter True/False, 1/0, or Yes/No."
+    echo "  Invalid. Enter 1/2, Off/On, 0/1, or True/False."
   done
   echo "$key=$out"
 }
@@ -182,25 +182,24 @@ prompt_enum() {
 
 # DeathPenalty enum: None, Item, ItemAndEquipment, All (default Item = drop all items except equipment)
 prompt_death_penalty() {
-  local default="${1:-All}"
-  local key="DeathPenalty" desc="Death penalty: None (no drops), Item (drop all items except equipment), ItemAndEquipment (drop all items), All (drop all items and all Pals on team)."
-  local tip="Enter: None, Item, ItemAndEquipment, All"
+  local default="${1:-Item}"
+  local key="DeathPenalty"
   local val
   while true; do
     echo ""
     echo "--- $key ---"
-    echo "  $desc"
-    echo "  Tip: $tip"
-    read -r -p "  [$key] ($default): " val
+    echo "  Death penalty on player death."
+    echo "  Options: 1=No Drops  2=Drop all items except equipment  3=Drop all items  4=Drop all items and all Pals. Default: 2"
+    read -r -p "  [1-4 or name] (default 2): " val
     val="${val:-$default}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
-      none) echo "DeathPenalty=None"; return 0 ;;
-      item) echo "DeathPenalty=Item"; return 0 ;;
-      itemandequipment) echo "DeathPenalty=ItemAndEquipment"; return 0 ;;
-      all) echo "DeathPenalty=All"; return 0 ;;
+      1|none) echo "DeathPenalty=None"; return 0 ;;
+      2|item) echo "DeathPenalty=Item"; return 0 ;;
+      3|itemandequipment) echo "DeathPenalty=ItemAndEquipment"; return 0 ;;
+      4|all) echo "DeathPenalty=All"; return 0 ;;
     esac
-    echo "  Invalid. Choose: None, Item, ItemAndEquipment, All"
+    echo "  Invalid. Enter 1-4 or: None, Item, ItemAndEquipment, All"
   done
 }
 
@@ -210,23 +209,21 @@ prompt_death_penalty_item_default() {
 
 # RandomizerType: None, Region, All
 prompt_randomizer_type() {
-  local key="RandomizerType" desc="Pal spawn randomization: None, Region (per region), All (fully random)."
-  local default="None" tip="Enter: None, Region, All"
+  local key="RandomizerType"
   local val
   while true; do
     echo ""
     echo "--- $key ---"
-    echo "  $desc"
-    echo "  Tip: $tip"
-    read -r -p "  [$key] ($default): " val
-    val="${val:-$default}"
+    echo "  Pal spawn randomization. Options: 1=None  2=Region (per region)  3=All (fully random). Default: 1"
+    read -r -p "  [1-3 or name] (default 1): " val
+    val="${val:-1}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
-      none) echo "RandomizerType=None"; return 0 ;;
-      region) echo "RandomizerType=Region"; return 0 ;;
-      all) echo "RandomizerType=All"; return 0 ;;
+      1|none) echo "RandomizerType=None"; return 0 ;;
+      2|region) echo "RandomizerType=Region"; return 0 ;;
+      3|all) echo "RandomizerType=All"; return 0 ;;
     esac
-    echo "  Invalid. Choose: None, Region, All"
+    echo "  Invalid. Enter 1-3 or: None, Region, All"
   done
 }
 
@@ -270,21 +267,21 @@ echo ""
 
 read -r -p "Advanced mode (fine-grained control of all settings)? [N/y]: " advanced_mode
 if [[ ! "${advanced_mode:-n}" =~ ^[Yy] ]]; then
-  # Simple difficulty mode: casual, normal, hard, hardcore
+  # Simple difficulty mode: 1=casual, 2=normal, 3=hard, 4=hardcore
   echo ""
-  echo "Choose difficulty preset:"
+  echo "Choose difficulty preset: 1=casual  2=normal  3=hard  4=hardcore"
   echo "  casual   - Easier rates, less penalty, fast travel on"
   echo "  normal   - Balanced defaults"
   echo "  hard     - Harder rates, more penalty"
   echo "  hardcore - No respawn, permanent loss (bHardcore, bPalLost, etc.)"
-  read -r -p "Difficulty [normal]: " difficulty
-  difficulty="$(echo "${difficulty:-normal}" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
+  read -r -p "Enter 1-4 or name (default 2): " difficulty
+  difficulty="$(echo "${difficulty:-2}" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
   case "$difficulty" in
-    casual)   DIFF_PRESET="casual" ;;
-    normal)   DIFF_PRESET="normal" ;;
-    hard)     DIFF_PRESET="hard" ;;
-    hardcore) DIFF_PRESET="hardcore" ;;
-    *)        DIFF_PRESET="normal" ;;
+    1|casual)   DIFF_PRESET="casual" ;;
+    2|normal)   DIFF_PRESET="normal" ;;
+    3|hard)     DIFF_PRESET="hard" ;;
+    4|hardcore) DIFF_PRESET="hardcore" ;;
+    *)          DIFF_PRESET="normal" ;;
   esac
   # Build preset OptionSettings (source: official params, preset values)
   case "$DIFF_PRESET" in
@@ -351,10 +348,9 @@ OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnablePredatorBossPal" "Enable Predator Pa
 # --- Autosave preset ---
 prompt_autosave() {
   echo ""
-  echo "--- AutoSaveSpan (seconds) ---"
-  echo "  Autosave interval. Choose: 30, 60, 300, 600, 900, 1800 (30s, 1m, 5m, 10m, 15m, 30m)."
-  echo "  Tip: Enter number of seconds or choice 1-6."
-  read -r -p "  [1=30s 2=1m 3=5m 4=10m 5=15m 6=30m] (3): " choice
+  echo "--- AutoSaveSpan ---"
+  echo "  Autosave interval. Options: 1=30s  2=1m  3=5m  4=10m  5=15m  6=30m. Default: 3 (5m)"
+  read -r -p "  Enter 1-6 (default 3): " choice
   choice="${choice:-3}"
   case "$(echo "$choice" | tr -d ' \t')" in
     1) echo "AutoSaveSpan=30.000000"; return 0 ;;
@@ -408,9 +404,8 @@ OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalEggDefaultHatchingTime" "Time (h)
 prompt_max_structures() {
   echo ""
   echo "--- MaxBuildingLimitNum ---"
-  echo "  Maximum number of structures per base. 0 = No limit."
-  echo "  Tip: 400, 500, 2000, 5000, 10000, or 0 (no limit)."
-  read -r -p "  [1=400 2=500 3=2000 4=5000 5=10000 6=No limit] (5): " choice
+  echo "  Maximum number of structures per base. Options: 1=400  2=500  3=2000  4=5000  5=10000  6=No limit. Default: 5 (10000)"
+  read -r -p "  Enter 1-6 (default 5): " choice
   choice="${choice:-5}"
   case "$(echo "$choice" | tr -d ' \t')" in
     1) echo "MaxBuildingLimitNum=400"; return 0 ;;

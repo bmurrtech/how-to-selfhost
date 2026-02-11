@@ -46,11 +46,110 @@ chmod +x import-palworld-save.sh
 wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/export-palworld-save.sh -O export-palworld-save.sh
 chmod +x export-palworld-save.sh
 
+# Download config-palworld.sh (original source or TinyURL mirror)
 wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh -O config-palworld.sh
+# Or, as an alternative:
+# wget https://tinyurl.com/8c4r3srf -O config-palworld.sh
+
 chmod +x config-palworld.sh
 ```
 
 See the [main README](../README.md) for prerequisites and troubleshooting.
+
+---
+
+### Modes and settings controls
+
+- **Simple mode (default):** Choose **1=casual**, **2=normal**, **3=hard**, or **4=hardcore**. One preset is written; no per-setting prompts.
+- **Advanced mode:** Custom difficulty; every setting is prompted with **options or number ranges** (see below). You can enter the number for multiple-choice (e.g. **1–6** for autosave) or a value within the range for numeric settings. Use when you need fine-grained control.
+
+Some settings **must be set before the first world creation** (see [Settings before world creation](#settings-before-world-creation)); they cannot be applied retroactively. The main install script (`palworld.sh`) and preset scripts prompt for these during setup. For custom config at setup time, use **palworld-custom.sh**.
+
+### Advanced mode: options reference
+
+When running **config-palworld.sh** in **advanced mode**, use the following as a guide. **Multiple-choice** prompts accept the number (e.g. **1**, **2**) or the text; **numeric** prompts accept a number in the range; **Off/On** accept **1=Off**, **2=On**, or **off**/ **on**/ **0**/ **1**.
+
+| Setting | Input | Default |
+|--------|--------|--------|
+| **Day time speed** | Number from **0.1 to 5** | 1 |
+| **Night time speed** | Number from **0.1 to 5** | 1 |
+| **Autosave interval** | **1**=30s, **2**=1m, **3**=5m, **4**=10m, **5**=15m, **6**=30m | 3 (5m) |
+| **EXP rate** | Number from **0.1 to 20** | 5 |
+| **Pal Capture Rate** | Number from **0.5 to 2** | 2 |
+| **Pal Appearance Rate** (affects performance) | Number from **0.5 to 3** | 1.5 |
+| **Damage from Pals multiplier** | Number from **0.1 to 5** | 1.5 |
+| **Damage to Pals multiplier** | Number from **0.1 to 5** | 1.5 |
+| **Pal Hunger Depletion Rate** | Number from **0.1 to 5** | 0.5 |
+| **Pal Stamina Reduction Rate** | Number from **0.1 to 5** | 0.5 |
+| **Pal Auto Health Regeneration Rate** | Number from **0.1 to 5** | 1 |
+| **Pal HP Regen in Palbox** | Number from **0.1 to 5** | 3 |
+| **Damage from Player multiplier** | Number from **0.1 to 5** | 2 |
+| **Damage to Player multiplier** | Number from **0.1 to 5** | 1 |
+| **Player Hunger Depletion Rate** | Number from **0.1 to 5** | 1 |
+| **Player Stamina Depletion Rate** | Number from **0.1 to 5** | 1 |
+| **Player Auto HP Regen Rate** | Number from **0.1 to 5** | 1 |
+| **Player Sleep HP Regen Rate** | Number from **0.1 to 5** | 1 |
+| **Damage to Structure multiplier** | Number from **0.5 to 3** | 1 |
+| **Structure Deterioration Rate** | Number from **0 to 10** | 0 |
+| **Max Dropped Items in World** | Integer from **0 to 5,000** | 3000 |
+| **Gatherable Items multiplier** | Number from **0.5 to 3** | 2 |
+| **Gatherable Objects Health multiplier** | Number from **0.5 to 3** | 2 |
+| **Gatherable Objects Respawn multiplier** | Number from **0.5 to 3** | 1 |
+| **Dropped Items multiplier** | Number from **0.5 to 3** | 2 |
+| **Item Weight Rate** | Number from **0 to 10** | 0.5 |
+| **Item Decay Rate multiplier** | Number from **0.1 to 10** | 1 |
+| **Equipment Durability Loss multiplier** | Number from **0 to 5** | 1 |
+| **Meteorite/Supplies Drop Interval (min)** | Integer from **1 to 999** | 200 |
+| **Time (h) to incubate Massive Egg** | Number from **0 to 240** | 1 |
+| **Enable Raid Events** | **1**=Off **2**=On (or off/on) | On |
+| **Enable Predator Pals** | **1**=Off **2**=On (or off/on) | On |
+| **Death Penalty** | **1**=No Drops **2**=Drop all items except equipment **3**=Drop all items **4**=Drop all items and all Pals | 2 |
+| **Max Guild Members** | Integer from **1 to 100** | 20 |
+| **Max bases per guild** | Integer from **2 to 10** | 6 |
+| **Max Work Pals at Base** | Integer from **1 to 50** | 30 |
+| **Max Structures per Base** | **1**=400 **2**=500 **3**=2000 **4**=5000 **5**=10000 **6**=No limit | 5 (10000) |
+| **Enable Fast Travel** | **1**=Off **2**=On | On |
+| **Restrict Fast Travel to Bases Only** | **1**=Off **2**=On | Off |
+| **Allow Pal genetic data in Global Palbox** | **1**=Off **2**=On | On |
+
+### Settings before world creation
+
+These **cannot be applied after the world exists**; set them in **palworld.sh** (or preset scripts) during initial setup, or use **palworld-custom.sh** to configure before first start.
+
+| Setting | Input | Default |
+|--------|--------|--------|
+| **Random Pal Mode** | **1**=None **2**=Region **3**=All (or none/region/all) | None |
+| **Randomizer Seed** | String (e.g. tomato, t3i4mgut); only used if Random Pal Mode ≠ None | — |
+| **Wild Pal levels fully random** | **1**=Off **2**=On | Off |
+| **Hardcore Mode** (no respawn on death) | **1**=Off **2**=On | Off |
+| **Hardcore Pal Mode** (lose Pals on death) | **1**=Off **2**=On | Off |
+| **Character recreate in Hardcore** | **1**=Off **2**=On | On |
+
+---
+
+## In-game admin commands
+
+Admin commands are run **from within the game**: press **Enter** and type the command. You must set **AdminPassword** in `PalWorldSettings.ini` (or during install) and then run **`/AdminPassword <password you set>`** in-game once to gain administrative privileges.
+
+Source: [Commands \| Palworld Server Guide](https://docs.palworldgame.com/settings-and-operation/commands#how-to-exec-command).
+
+| Command | Description |
+|---------|-------------|
+| `/AdminPassword <password>` | Obtain admin privileges using the password set in config. |
+| `/Shutdown [Seconds] [MessageText]` | Shut down the server; optional delay and message to players. |
+| `/DoExit` | Force stop the server. |
+| `/Broadcast <MessageText>` | Send a message to all players. |
+| `/KickPlayer <SteamID>` | Kick a player. |
+| `/BanPlayer <SteamID>` | Ban a player. |
+| `/UnBanPlayer <SteamID>` | Unban a player. |
+| `/TeleportToPlayer <SteamID>` | Teleport yourself to that player. |
+| `/TeleportToMe <SteamID>` | Teleport that player to you. |
+| `/ShowPlayers` | Show all connected players. |
+| `/Info` | Show server information. |
+| `/Save` | Save the world data. |
+| `/ToggleSpectate` | Toggle spectator mode (use \\ to switch). |
+
+If AdminPassword is not set in the config, these commands will not work. The install script prompts for an admin password; you can skip and set it later in `PalWorldSettings.ini`, then restart the server.
 
 ---
 
@@ -136,37 +235,6 @@ The script stops the server, downloads the zip, extracts to the save directory, 
 
 ---
 
-## Server configuration (config-palworld.sh)
-
-**config-palworld.sh** is intended to be run **after** the Palworld server has been created. Use it when you want to **modify configuration after deployment** (e.g. change difficulty, rates, or options on an existing server). It assumes the server already exists and stops it before applying changes.
-
-By default, `PalWorldSettings.ini` on the server (and on Windows) is empty or minimal; game/save data does not include it. You can either use a preset at install time (casual/normal/hard/hardcore), full custom at install (palworld-custom.sh), or change settings later with **config-palworld.sh**.
-
-**config-palworld.sh** is an interactive wizard that:
-
-- Asks **Advanced mode? [N/y]**. If you press **N** or Enter: simple **difficulty** mode (choose **casual**, **normal**, **hard**, or **hardcore**); the script writes a preset and exits. If you choose **y**: **Custom** difficulty and full fine-grained control of all settings.
-- Stops the Palworld service before making changes (required — edits while the server is running are overwritten on shutdown).
-- In advanced mode: walks through [configuration parameters](https://docs.palworldgame.com/settings-and-operation/configuration) with **ranges and defaults** (e.g. day/night speed 0.1–5, EXP rate 0.1–20, autosave 30s/1m/5m/10m/15m/30m, death penalty default “Drop all items except equipment”, max structures 400/500/2000/5000/10000/No limit). Input is normalized (e.g. spaces in numbers ignored) and validated.
-- Writes to `Pal/Saved/Config/LinuxServer/PalWorldSettings.ini` (default install path `/home/steam/palserver`).
-- Optionally restarts the server when done.
-
-Run after install or anytime you want to change server settings:
-
-```bash
-sudo ./config-palworld.sh
-```
-
-Optional: `PAL_INSTALL_DIR=/home/steam/palserver` if you used a different install path.
-
-### Modes and settings controls
-
-- **Simple mode (default):** Choose **casual** | **normal** | **hard** | **hardcore**. One preset is written; no per-setting prompts.
-- **Advanced mode:** Custom difficulty; every setting is prompted with a tip, default, and (where applicable) min/max range. Use when you need fine-grained control (e.g. exact EXP rate, autosave interval, raid events on/off, predator Pals on/off).
-
-Some settings (Random Pal Mode, RandomizerSeed, bIsRandomizerPalLevelRandom, bHardcore, bPalLost, bCharacterRecreateInHardcore) **must be set before the first world creation**; they cannot be applied retroactively. The main install script (`palworld.sh`) and preset scripts prompt for these during setup. For custom config at setup time, use **palworld-custom.sh**.
-
----
-
 ## Configuration parameters reference
 
 Source: [Configuration parameters \| Palworld Server Guide](https://docs.palworldgame.com/settings-and-operation/configuration) (0.7.1). The following is a short reference; the official page is the authority.
@@ -179,32 +247,6 @@ Source: [Configuration parameters \| Palworld Server Guide](https://docs.palworl
 | **Game balances** | BlockRespawnTime, bPalLost, BuildObjectDamageRate, BuildObjectDeteriorationDamageRate, CollectionDropRate, CollectionObjectHpRate, CollectionObjectRespawnSpeedRate, DayTimeSpeedRate, DeathPenalty, EnemyDropItemRate, EquipmentDurabilityDamageRate, ExpRate, GuildPlayerMaxNum, ItemCorruptionMultiplier, ItemWeightRate, NightTimeSpeedRate, Pal/Player damage and regen rates, PalCaptureRate, PalEggDefaultHatchingTime, PalSpawnNumRate, SupplyDropSpan, etc. |
 
 API schema (for programmatic settings): [REST API – Get server settings](https://docs.palworldgame.com/api/rest-api/settings).
-
----
-
-## In-game admin commands
-
-Admin commands are run **from within the game**: press **Enter** and type the command. You must set **AdminPassword** in `PalWorldSettings.ini` (or during install) and then run **`/AdminPassword <password you set>`** in-game once to gain administrative privileges.
-
-Source: [Commands \| Palworld Server Guide](https://docs.palworldgame.com/settings-and-operation/commands#how-to-exec-command).
-
-| Command | Description |
-|---------|-------------|
-| `/AdminPassword <password>` | Obtain admin privileges using the password set in config. |
-| `/Shutdown [Seconds] [MessageText]` | Shut down the server; optional delay and message to players. |
-| `/DoExit` | Force stop the server. |
-| `/Broadcast <MessageText>` | Send a message to all players. |
-| `/KickPlayer <SteamID>` | Kick a player. |
-| `/BanPlayer <SteamID>` | Ban a player. |
-| `/UnBanPlayer <SteamID>` | Unban a player. |
-| `/TeleportToPlayer <SteamID>` | Teleport yourself to that player. |
-| `/TeleportToMe <SteamID>` | Teleport that player to you. |
-| `/ShowPlayers` | Show all connected players. |
-| `/Info` | Show server information. |
-| `/Save` | Save the world data. |
-| `/ToggleSpectate` | Toggle spectator mode (use \\ to switch). |
-
-If AdminPassword is not set in the config, these commands will not work. The install script prompts for an admin password; you can skip and set it later in `PalWorldSettings.ini`, then restart the server.
 
 ---
 

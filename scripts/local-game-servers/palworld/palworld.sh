@@ -218,23 +218,29 @@ echo "  Random Pal Mode, Randomizer Seed, Random Pal levels, Hardcore, Hardcore 
 read -p "Set these now? [Y/n]: " set_before_world
 if [[ ! "${set_before_world:-y}" =~ ^[Nn] ]]; then
   CONFIG_FILE="$CONFIG_DIR/PalWorldSettings.ini"
-  read -p "Random Pal Mode (None / Region / All) [None]: " RAND_TYPE
-  RAND_TYPE="${RAND_TYPE:-None}"
+  echo "  Random Pal Mode: 1=None  2=Region  3=All (or type none/region/all)"
+  read -p "  Enter 1-3 or name [1]: " RAND_TYPE
+  RAND_TYPE="${RAND_TYPE:-1}"
   read -p "Randomizer seed (string, e.g. tomato or t3i4mgut; leave empty if None): " RAND_SEED
-  read -p "Wild Pal levels fully random (y/N): " RAND_LEVEL
-  RAND_LEVEL="${RAND_LEVEL:-n}"
-  read -p "Hardcore mode - no respawn on death (y/N): " HARDCORE
-  HARDCORE="${HARDCORE:-n}"
-  read -p "Hardcore Pal mode - lose Pals on death (requires Hardcore) (y/N): " PAL_LOST
-  PAL_LOST="${PAL_LOST:-n}"
-  read -p "Allow character recreate in Hardcore (Y/n): " CHAR_RECREATE
-  CHAR_RECREATE="${CHAR_RECREATE:-y}"
-  # Apply via sed (OptionSettings= line)
-  [[ "$RAND_TYPE" =~ ^[Rr]egion$ ]] && RAND_TYPE="Region" || { [[ "$RAND_TYPE" =~ ^[Aa]ll$ ]] && RAND_TYPE="All"; } || RAND_TYPE="None"
-  [[ "$RAND_LEVEL" =~ ^[Yy] ]] && RAND_LEVEL="True" || RAND_LEVEL="False"
-  [[ "$HARDCORE" =~ ^[Yy] ]] && HARDCORE="True" || HARDCORE="False"
-  [[ "$PAL_LOST" =~ ^[Yy] ]] && PAL_LOST="True" || PAL_LOST="False"
-  [[ "$CHAR_RECREATE" =~ ^[Nn] ]] && CHAR_RECREATE="False" || CHAR_RECREATE="True"
+  echo "  Wild Pal levels fully random: 1=Off  2=On (or y/N)"
+  read -p "  Enter 1-2 or y/n [1]: " RAND_LEVEL
+  RAND_LEVEL="${RAND_LEVEL:-1}"
+  echo "  Hardcore mode (no respawn on death): 1=Off  2=On (or y/N)"
+  read -p "  Enter 1-2 or y/n [1]: " HARDCORE
+  HARDCORE="${HARDCORE:-1}"
+  echo "  Hardcore Pal mode (lose Pals on death; assumes Hardcore): 1=Off  2=On (or y/N)"
+  read -p "  Enter 1-2 or y/n [1]: " PAL_LOST
+  PAL_LOST="${PAL_LOST:-1}"
+  echo "  Character recreate in Hardcore: 1=Off  2=On (or Y/n). Default: On"
+  read -p "  Enter 1-2 or y/n [2]: " CHAR_RECREATE
+  CHAR_RECREATE="${CHAR_RECREATE:-2}"
+  # Normalize: RAND_TYPE 1/none -> None, 2/region -> Region, 3/all -> All
+  RAND_TYPE="$(echo "$RAND_TYPE" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
+  [[ "$RAND_TYPE" == "2" || "$RAND_TYPE" == "region" ]] && RAND_TYPE="Region" || { [[ "$RAND_TYPE" == "3" || "$RAND_TYPE" == "all" ]] && RAND_TYPE="All"; } || RAND_TYPE="None"
+  [[ "$RAND_LEVEL" == "2" || "$RAND_LEVEL" =~ ^[Yy] ]] && RAND_LEVEL="True" || RAND_LEVEL="False"
+  [[ "$HARDCORE" == "2" || "$HARDCORE" =~ ^[Yy] ]] && HARDCORE="True" || HARDCORE="False"
+  [[ "$PAL_LOST" == "2" || "$PAL_LOST" =~ ^[Yy] ]] && PAL_LOST="True" || PAL_LOST="False"
+  [[ "$CHAR_RECREATE" == "1" || "$CHAR_RECREATE" =~ ^[Nn] ]] && CHAR_RECREATE="False" || CHAR_RECREATE="True"
   sed -i "s/RandomizerType=[^,)]*/RandomizerType=$RAND_TYPE/" "$CONFIG_FILE" 2>/dev/null || true
   sed -i "s/RandomizerSeed=\"[^\"]*\"/RandomizerSeed=\"$RAND_SEED\"/" "$CONFIG_FILE" 2>/dev/null || true
   sed -i "s/bIsRandomizerPalLevelRandom=[^,)]*/bIsRandomizerPalLevelRandom=$RAND_LEVEL/" "$CONFIG_FILE" 2>/dev/null || true
