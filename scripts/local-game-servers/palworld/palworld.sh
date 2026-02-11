@@ -214,25 +214,39 @@ if [[ -n "$PALWORLD_PRESET" ]] && [[ "$PALWORLD_PRESET" =~ ^(casual|normal|hard|
 else
 echo ""
 echo "Settings that apply only BEFORE world creation (cannot be changed later):"
-echo "  Random Pal Mode, Randomizer Seed, Random Pal levels, Hardcore, Hardcore Pal loss, Character recreate in Hardcore."
+echo "  Random Pal Mode (RandomizerType), Randomizer Seed, Wild Pal levels (bIsRandomizerPalLevelRandom),"
+echo "  Hardcore (bHardcore), Hardcore Pal Mode (bPalLost), Character recreate (bCharacterRecreateInHardcore)."
 read -p "Set these now? [Y/n]: " set_before_world
 if [[ ! "${set_before_world:-y}" =~ ^[Nn] ]]; then
   CONFIG_FILE="$CONFIG_DIR/PalWorldSettings.ini"
-  echo "  Random Pal Mode: 1=None  2=Region  3=All (or type none/region/all)"
-  read -p "  Enter 1-3 or name [1]: " RAND_TYPE
+  echo ""
+  echo "--- Random Pal Mode (RandomizerType) ---"
+  echo "  Options: 1=None  2=Region  3=All. Default: 1"
+  read -p "  Enter 1-3 (default 1): " RAND_TYPE
   RAND_TYPE="${RAND_TYPE:-1}"
-  read -p "Randomizer seed (string, e.g. tomato or t3i4mgut; leave empty if None): " RAND_SEED
-  echo "  Wild Pal levels fully random: 1=Off  2=On (or y/N)"
-  read -p "  Enter 1-2 or y/n [1]: " RAND_LEVEL
+  echo ""
+  echo "--- Randomizer seed (RandomizerSeed) ---"
+  echo "  Enter: string or word if Random Pal Mode enabled (e.g. tomato); leave empty if None"
+  read -p "  Value (default: empty): " RAND_SEED
+  echo ""
+  echo "--- Wild Pal levels fully random (bIsRandomizerPalLevelRandom) ---"
+  echo "  Options: 1=Off  2=On. Default: 1"
+  read -p "  Enter 1-2 (default 1): " RAND_LEVEL
   RAND_LEVEL="${RAND_LEVEL:-1}"
-  echo "  Hardcore mode (no respawn on death): 1=Off  2=On (or y/N)"
-  read -p "  Enter 1-2 or y/n [1]: " HARDCORE
+  echo ""
+  echo "--- Hardcore mode (bHardcore) - no respawn on death ---"
+  echo "  Options: 1=Off  2=On. Default: 1"
+  read -p "  Enter 1-2 (default 1): " HARDCORE
   HARDCORE="${HARDCORE:-1}"
-  echo "  Hardcore Pal mode (lose Pals on death; assumes Hardcore): 1=Off  2=On (or y/N)"
-  read -p "  Enter 1-2 or y/n [1]: " PAL_LOST
+  echo ""
+  echo "--- Hardcore Pal Mode (bPalLost) - lose Pals on death ---"
+  echo "  Options: 1=Off  2=On (assumes Hardcore). Default: 1"
+  read -p "  Enter 1-2 (default 1): " PAL_LOST
   PAL_LOST="${PAL_LOST:-1}"
-  echo "  Character recreate in Hardcore: 1=Off  2=On (or Y/n). Default: On"
-  read -p "  Enter 1-2 or y/n [2]: " CHAR_RECREATE
+  echo ""
+  echo "--- Character recreate in Hardcore (bCharacterRecreateInHardcore) ---"
+  echo "  Options: 1=Off  2=On. Default: 2"
+  read -p "  Enter 1-2 (default 2): " CHAR_RECREATE
   CHAR_RECREATE="${CHAR_RECREATE:-2}"
   # Normalize: RAND_TYPE 1/none -> None, 2/region -> Region, 3/all -> All
   RAND_TYPE="$(echo "$RAND_TYPE" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"

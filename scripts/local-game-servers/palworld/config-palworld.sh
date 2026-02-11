@@ -53,15 +53,15 @@ normalize_bool() {
   esac
 }
 
+# label = human-readable name; key = INI key. note = what to enter (e.g. "number, e.g. 1.0").
 prompt_float() {
-  local key="$1" desc="$2" default="$3" tip="$4"
+  local key="$1" label="$2" default="$3" note="$4"
   local val
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  $desc"
-    echo "  Tip: $tip"
-    read -r -p "  [$key] ($default): " val
+    echo "--- $label ($key) ---"
+    echo "  Enter: $note"
+    read -r -p "  Value (default: $default): " val
     val="${val:-$default}"
     val="$(normalize_float "$val" 2>/dev/null)" && break
     echo "  Invalid. Enter a number (e.g. 1.0 or 1.5)."
@@ -69,15 +69,15 @@ prompt_float() {
   echo "$key=$val"
 }
 
+# label = human-readable name; key = INI key. note = what to enter (e.g. "integer 4-32").
 prompt_int() {
-  local key="$1" desc="$2" default="$3" tip="$4"
+  local key="$1" label="$2" default="$3" note="$4"
   local val
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  $desc"
-    echo "  Tip: $tip"
-    read -r -p "  [$key] ($default): " val
+    echo "--- $label ($key) ---"
+    echo "  Enter: $note"
+    read -r -p "  Value (default: $default): " val
     val="${val:-$default}"
     val="$(normalize_int "$val" 2>/dev/null)" && break
     echo "  Invalid. Enter an integer (e.g. 16 or 0)."
@@ -85,16 +85,15 @@ prompt_int() {
   echo "$key=$val"
 }
 
-# Float with min/max range (clamped). Tip should include range, e.g. "Float 0.1-5."
+# Float with min/max range (clamped). label = human-readable name (README); key = INI key.
 prompt_float_range() {
-  local key="$1" desc="$2" default="$3" min="$4" max="$5" tip="$6"
+  local key="$1" label="$2" default="$3" min="$4" max="$5"
   local val
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  $desc"
+    echo "--- $label ($key) ---"
     echo "  Options: number from $min to $max. Default: $default"
-    read -r -p "  Value ($min-$max, default $default): " val
+    read -r -p "  Enter ($min-$max, default $default): " val
     val="${val:-$default}"
     val="$(clamp_float "$val" "$min" "$max" 2>/dev/null)" && break
     echo "  Invalid. Enter a number between $min and $max (e.g. $default)."
@@ -102,16 +101,15 @@ prompt_float_range() {
   echo "$key=$val"
 }
 
-# Integer with min/max range (clamped)
+# Integer with min/max range (clamped). label = human-readable name (README); key = INI key.
 prompt_int_range() {
-  local key="$1" desc="$2" default="$3" min="$4" max="$5" tip="$6"
+  local key="$1" label="$2" default="$3" min="$4" max="$5"
   local val
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  $desc"
+    echo "--- $label ($key) ---"
     echo "  Options: integer from $min to $max. Default: $default"
-    read -r -p "  Value ($min-$max, default $default): " val
+    read -r -p "  Enter ($min-$max, default $default): " val
     val="${val:-$default}"
     val="$(normalize_int "$val" 2>/dev/null)" || true
     if [[ -n "$val" ]] && [[ "$val" -ge "$min" ]] && [[ "$val" -le "$max" ]]; then
@@ -123,31 +121,30 @@ prompt_int_range() {
   echo "$key=$val"
 }
 
+# label = human-readable name (README); key = INI key. default = True or False.
 prompt_bool() {
-  local key="$1" desc="$2" default="$3" tip="$4"
+  local key="$1" label="$2" default="$3"
   local val out
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  $desc"
-    echo "  Options: 1=Off 2=On (or off/on, 0/1, false/true). Default: $default"
-    read -r -p "  [1=Off 2=On] (default $default): " val
+    echo "--- $label ($key) ---"
+    echo "  Options: 1=Off  2=On (or off/on, 0/1, false/true). Default: $default"
+    read -r -p "  Enter 1 or 2 (default $default): " val
     val="${val:-$default}"
     out="$(normalize_bool "$val" 2>/dev/null)" && break
-    echo "  Invalid. Enter 1/2, Off/On, 0/1, or True/False."
+    echo "  Invalid. Enter 1=Off, 2=On, or off/on/true/false."
   done
   echo "$key=$out"
 }
 
+# label = human-readable name; key = INI key. note = what to enter (e.g. "any string, or leave empty").
 prompt_string() {
-  local key="$1" desc="$2" default="$3" tip="$4"
+  local key="$1" label="$2" default="$3" note="$4"
   echo ""
-  echo "--- $key ---"
-  echo "  $desc"
-  echo "  Tip: $tip"
-  read -r -p "  [$key] ($default): " val
+  echo "--- $label ($key) ---"
+  echo "  Enter: $note"
+  read -r -p "  Value (default: $default): " val
   val="${val:-$default}"
-  # Escape quotes for INI
   val="${val//\\/\\\\}"
   val="${val//\"/\\\"}"
   echo "$key=\"$val\""
@@ -180,17 +177,15 @@ prompt_enum() {
   done
 }
 
-# DeathPenalty enum: None, Item, ItemAndEquipment, All (default Item = drop all items except equipment)
+# Death Penalty (DeathPenalty): None, Item, ItemAndEquipment, All
 prompt_death_penalty() {
   local default="${1:-Item}"
-  local key="DeathPenalty"
   local val
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  Death penalty on player death."
+    echo "--- Death Penalty (DeathPenalty) ---"
     echo "  Options: 1=No Drops  2=Drop all items except equipment  3=Drop all items  4=Drop all items and all Pals. Default: 2"
-    read -r -p "  [1-4 or name] (default 2): " val
+    read -r -p "  Enter 1-4 (default 2): " val
     val="${val:-$default}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
@@ -207,15 +202,14 @@ prompt_death_penalty_item_default() {
   prompt_death_penalty "Item"
 }
 
-# RandomizerType: None, Region, All
+# Random Pal Mode (RandomizerType): None, Region, All
 prompt_randomizer_type() {
-  local key="RandomizerType"
   local val
   while true; do
     echo ""
-    echo "--- $key ---"
-    echo "  Pal spawn randomization. Options: 1=None  2=Region (per region)  3=All (fully random). Default: 1"
-    read -r -p "  [1-3 or name] (default 1): " val
+    echo "--- Random Pal Mode (RandomizerType) ---"
+    echo "  Options: 1=None  2=Region (per region)  3=All (fully random). Default: 1"
+    read -r -p "  Enter 1-3 (default 1): " val
     val="${val:-1}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
@@ -227,15 +221,13 @@ prompt_randomizer_type() {
   done
 }
 
-# CrossplayPlatforms: (Steam,Xbox,PS5,Mac) - keep parentheses
+# Crossplay platforms (CrossplayPlatforms)
 prompt_crossplay() {
-  local key="CrossplayPlatforms" desc="Allowed platforms to connect. Use parentheses, e.g. (Steam,Xbox,PS5,Mac)."
-  local default="(Steam,Xbox,PS5,Mac)" tip="String with parentheses, e.g. (Steam,Xbox,PS5,Mac)"
+  local default="(Steam,Xbox,PS5,Mac)"
   echo ""
-  echo "--- $key ---"
-  echo "  $desc"
-  echo "  Tip: $tip"
-  read -r -p "  [$key] ($default): " val
+  echo "--- Crossplay platforms (CrossplayPlatforms) ---"
+  echo "  Enter: platforms in parentheses, e.g. (Steam,Xbox,PS5,Mac)"
+  read -r -p "  Value (default: $default): " val
   val="${val:-$default}"
   val="${val//\\/\\\\}"
   val="${val//\"/\\\"}"
@@ -324,32 +316,32 @@ OUTPUT=""
 
 # --- Server management ---
 echo "=== Server management ==="
-OUTPUT="$OUTPUT"$'\n'"$(prompt_string "ServerName" "Server name shown in the list." "My Palworld Server" "Any string.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_string "ServerDescription" "Server description." "" "Any string.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_string "ServerPassword" "Password required to join (empty = no password)." "" "String or leave empty.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_string "AdminPassword" "Password for admin privileges (ingame)." "" "String.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int "ServerPlayerMaxNum" "Maximum number of players who can join." "16" "Integer (e.g. 4–32).")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int "ChatPostLimitPerMinute" "Max chat messages per minute per player." "10" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsShowJoinLeftMessage" "Show in-game messages when players join/leave." "True" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowClientMod" "Allow players with mods to join." "False" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsUseBackupSaveData" "Enable world backups (increases disk load)." "False" "True/False or 1/0.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_string "ServerName" "Server name" "My Palworld Server" "any string (shown in server list)")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_string "ServerDescription" "Server description" "" "any string or leave empty")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_string "ServerPassword" "Server password" "" "password to join, or leave empty for none")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_string "AdminPassword" "Admin password" "" "password for in-game admin commands")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int "ServerPlayerMaxNum" "Max players" "16" "integer (e.g. 4-32)")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int "ChatPostLimitPerMinute" "Chat messages per minute per player" "10" "integer")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsShowJoinLeftMessage" "Show join/leave messages" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowClientMod" "Allow client mods" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsUseBackupSaveData" "Enable world backups" "False")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_crossplay)"
 
 # --- PvP / combat ---
 echo ""
 echo "=== PvP and combat ==="
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsPvP" "Enable PvP (player vs player damage)." "False" "True/False or 1/0.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsPvP" "Enable PvP" "False")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_death_penalty_item_default)"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bPalLost" "Permanently lose Pals on death (Hardcore Pal Mode)." "False" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "BlockRespawnTime" "Cooldown before respawn after death (seconds)." "300.000000" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableInvaderEnemy" "Enable Raid Events (Invader)." "True" "On/Off or True/False.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnablePredatorBossPal" "Enable Predator Pals." "True" "On/Off or True/False.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bPalLost" "Hardcore Pal Mode (lose Pals on death)" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float "BlockRespawnTime" "Respawn cooldown (seconds)" "300.000000" "seconds after death")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableInvaderEnemy" "Enable Raid Events" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnablePredatorBossPal" "Enable Predator Pals" "True")"
 
-# --- Autosave preset ---
+# --- Autosave interval (AutoSaveSpan) ---
 prompt_autosave() {
   echo ""
-  echo "--- AutoSaveSpan ---"
-  echo "  Autosave interval. Options: 1=30s  2=1m  3=5m  4=10m  5=15m  6=30m. Default: 3 (5m)"
+  echo "--- Autosave interval (AutoSaveSpan) ---"
+  echo "  Options: 1=30s  2=1m  3=5m  4=10m  5=15m  6=30m. Default: 3 (5m)"
   read -r -p "  Enter 1-6 (default 3): " choice
   choice="${choice:-3}"
   case "$(echo "$choice" | tr -d ' \t')" in
@@ -363,48 +355,48 @@ prompt_autosave() {
   esac
 }
 
-# --- Time and rates (with user ranges/defaults) ---
+# --- Time and rates (README-mapped labels and keys) ---
 echo ""
 echo "=== Time and rates ==="
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "DayTimeSpeedRate" "Day time speed (larger = shorter days)." "1" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "NightTimeSpeedRate" "Night time speed (larger = shorter nights)." "1" "0.1" "5" "Float.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "DayTimeSpeedRate" "Day time speed" "1" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "NightTimeSpeedRate" "Night time speed" "1" "0.1" "5")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_autosave)"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ExpRate" "EXP gain multiplier." "5" "0.1" "20" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalCaptureRate" "Pal capture rate multiplier." "2" "0.5" "2" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalSpawnNumRate" "Pal appearance rate (affects performance)." "1.5" "0.5" "3" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalDamageRateAttack" "Damage from Pals multiplier." "1.5" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalDamageRateDefense" "Damage to Pals multiplier." "1.5" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalStomachDecreaceRate" "Pal hunger depletion rate." "0.5" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalStaminaDecreaceRate" "Pal stamina depletion rate." "0.5" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalAutoHPRegeneRate" "Pal auto HP regen rate." "1" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalAutoHpRegeneRateInSleep" "Pal HP regen in Palbox." "3" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerDamageRateAttack" "Damage from players multiplier." "2" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerDamageRateDefense" "Damage to players multiplier." "1" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerStomachDecreaceRate" "Player hunger depletion rate." "1" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerStaminaDecreaceRate" "Player stamina depletion rate." "1" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerAutoHPRegeneRate" "Player auto HP regen rate." "1" "0.1" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerAutoHpRegeneRateInSleep" "Player sleep HP regen rate." "1" "0.1" "5" "Float.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ExpRate" "EXP rate" "5" "0.1" "20")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalCaptureRate" "Pal Capture Rate" "2" "0.5" "2")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalSpawnNumRate" "Pal Appearance Rate (affects performance)" "1.5" "0.5" "3")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalDamageRateAttack" "Damage from Pals multiplier" "1.5" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalDamageRateDefense" "Damage to Pals multiplier" "1.5" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalStomachDecreaceRate" "Pal Hunger Depletion Rate" "0.5" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalStaminaDecreaceRate" "Pal Stamina Reduction Rate" "0.5" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalAutoHPRegeneRate" "Pal Auto Health Regeneration Rate" "1" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalAutoHpRegeneRateInSleep" "Pal HP Regen in Palbox" "3" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerDamageRateAttack" "Damage from Player multiplier" "2" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerDamageRateDefense" "Damage to Player multiplier" "1" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerStomachDecreaceRate" "Player Hunger Depletion Rate" "1" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerStaminaDecreaceRate" "Player Stamina Depletion Rate" "1" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerAutoHPRegeneRate" "Player Auto HP Regen Rate" "1" "0.1" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PlayerAutoHpRegeneRateInSleep" "Player Sleep HP Regen Rate" "1" "0.1" "5")"
 
-# --- Building and collection (ranges) ---
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "BuildObjectDamageRate" "Damage to structure multiplier." "1" "0.5" "3" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "BuildObjectDeteriorationDamageRate" "Structure deterioration rate." "0" "0" "10" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "DropItemMaxNum" "Maximum number of dropped items in world." "3000" "0" "5000" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "CollectionDropRate" "Gatherable items multiplier." "2" "0.5" "3" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "CollectionObjectHpRate" "Gatherable objects health multiplier." "2" "0.5" "3" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "CollectionObjectRespawnSpeedRate" "Gatherable respawn multiplier (smaller = faster)." "1" "0.5" "3" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "EnemyDropItemRate" "Dropped items multiplier." "2" "0.5" "3" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "DropItemAliveMaxHours" "Hours until dropped items despawn." "1.000000" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ItemWeightRate" "Item weight multiplier." "0.5" "0" "10" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ItemCorruptionMultiplier" "Item decay rate multiplier." "1" "0.1" "10" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "EquipmentDurabilityDamageRate" "Equipment durability loss multiplier." "1" "0" "5" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "SupplyDropSpan" "Meteorite/Supplies drop interval (minutes)." "200" "1" "999" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalEggDefaultHatchingTime" "Time (h) to incubate Massive Egg. Other eggs need time too." "1" "0" "240" "Float.")"
+# --- Building and collection ---
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "BuildObjectDamageRate" "Damage to Structure multiplier" "1" "0.5" "3")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "BuildObjectDeteriorationDamageRate" "Structure Deterioration Rate" "0" "0" "10")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "DropItemMaxNum" "Max Dropped Items in World" "3000" "0" "5000")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "CollectionDropRate" "Gatherable Items multiplier" "2" "0.5" "3")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "CollectionObjectHpRate" "Gatherable Objects Health multiplier" "2" "0.5" "3")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "CollectionObjectRespawnSpeedRate" "Gatherable Objects Respawn multiplier" "1" "0.5" "3")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "EnemyDropItemRate" "Dropped Items multiplier" "2" "0.5" "3")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float "DropItemAliveMaxHours" "Hours until dropped items despawn" "1.000000" "number of hours")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ItemWeightRate" "Item Weight Rate" "0.5" "0" "10")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ItemCorruptionMultiplier" "Item Decay Rate multiplier" "1" "0.1" "10")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "EquipmentDurabilityDamageRate" "Equipment Durability Loss multiplier" "1" "0" "5")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "SupplyDropSpan" "Meteorite/Supplies Drop Interval (min)" "200" "1" "999")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "PalEggDefaultHatchingTime" "Time (h) to incubate Massive Egg" "1" "0" "240")"
 
-# --- Max structures per base preset ---
+# --- Max Structures per Base (MaxBuildingLimitNum) ---
 prompt_max_structures() {
   echo ""
-  echo "--- MaxBuildingLimitNum ---"
-  echo "  Maximum number of structures per base. Options: 1=400  2=500  3=2000  4=5000  5=10000  6=No limit. Default: 5 (10000)"
+  echo "--- Max Structures per Base (MaxBuildingLimitNum) ---"
+  echo "  Options: 1=400  2=500  3=2000  4=5000  5=10000  6=No limit. Default: 5 (10000)"
   read -r -p "  Enter 1-6 (default 5): " choice
   choice="${choice:-5}"
   case "$(echo "$choice" | tr -d ' \t')" in
@@ -421,30 +413,30 @@ prompt_max_structures() {
 # --- Bases and guild ---
 echo ""
 echo "=== Bases and guild ==="
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int "BaseCampMaxNum" "Maximum number of base camps (performance)." "128" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampWorkerMaxNum" "Max work Pals at base." "30" "1" "50" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampMaxNumInGuild" "Max bases per guild." "6" "2" "10" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "GuildPlayerMaxNum" "Maximum guild members." "20" "1" "100" "Integer.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAutoResetGuildNoOnlinePlayers" "Auto delete guild when no one logs in." "False" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "AutoResetGuildTimeNoOnlinePlayers" "Hours offline before auto-reset (if above enabled)." "72.000000" "Float.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int "BaseCampMaxNum" "Max base camps (performance)" "128" "integer")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampWorkerMaxNum" "Max Work Pals at Base" "30" "1" "50")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampMaxNumInGuild" "Max bases per guild" "6" "2" "10")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "GuildPlayerMaxNum" "Max Guild Members" "20" "1" "100")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAutoResetGuildNoOnlinePlayers" "Auto delete guild when no one logs in" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float "AutoResetGuildTimeNoOnlinePlayers" "Hours offline before guild auto-reset" "72.000000" "hours (if above enabled)")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_max_structures)"
 
 # --- Features ---
 echo ""
 echo "=== Features ==="
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableFastTravel" "Enable fast travel." "True" "On/Off.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableFastTravelOnlyBaseCamp" "Restrict fast travel to bases only." "False" "On/Off.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsStartLocationSelectByMap" "Allow choosing start location on map." "True" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bExistPlayerAfterLogout" "Players sleep at logout location (False = delete position)." "False" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bHardcore" "Hardcore mode (no respawn on death)." "False" "On/Off.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bShowPlayerList" "Show player list in ESC menu." "True" "True/False or 1/0.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxExport" "Allow Pal genetic data in Global Palbox (save)." "True" "On/Off.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxImport" "Allow loading from Global Palbox." "False" "On/Off.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableFastTravel" "Enable Fast Travel" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableFastTravelOnlyBaseCamp" "Restrict Fast Travel to Bases Only" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsStartLocationSelectByMap" "Choose start location on map" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bExistPlayerAfterLogout" "Players sleep at logout location" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bHardcore" "Hardcore mode (no respawn on death)" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bShowPlayerList" "Show player list in ESC menu" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxExport" "Allow Pal genetic data in Global Palbox" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxImport" "Allow loading from Global Palbox" "False")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_randomizer_type)"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_string "RandomizerSeed" "Seed for Pal randomizer (if enabled)." "" "String or word, e.g. tomato.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsRandomizerPalLevelRandom" "Random mode: wild Pal levels fully random." "False" "On/Off.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "WorkSpeedRate" "Work speed multiplier." "1.000000" "Float.")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ServerReplicatePawnCullDistance" "Pal sync distance from players (5000–15000 cm)." "15000.000000" "5000" "15000" "Float.")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_string "RandomizerSeed" "Randomizer seed" "" "string or word if Random Pal Mode enabled (e.g. tomato)")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsRandomizerPalLevelRandom" "Wild Pal levels fully random" "False")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float "WorkSpeedRate" "Work speed multiplier" "1.000000" "number")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ServerReplicatePawnCullDistance" "Pal sync distance from players (cm)" "15000.000000" "5000" "15000")"
 
 # Write INI: use [/Script/Pal.PalGameWorldSettings] and OptionSettings= for compatibility
 # Build OptionSettings=(Key=Value,...) - strip newlines from OUTPUT and join with comma
