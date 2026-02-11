@@ -57,6 +57,21 @@ wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main
 # wget https://tinyurl.com/47yr6kta -O palworld.sh
 chmod +x palworld.sh
 sudo ./palworld.sh
+
+# Palworld Save Import Script
+wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld-save-import.sh -O palworld-save-import.sh
+# Or use the short URL: https://tinyurl.com/2fymkt75
+# wget https://tinyurl.com/2fymkt75 -O palworld-save-import.sh
+chmod +x palworld-save-import.sh
+sudo ./palworld-save-import.sh
+
+# Palworld Save Export Script
+wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld-save-export.sh -O palworld-save-export.sh
+# Or use the short URL: https://tinyurl.com/4vkkkex4
+# wget https://tinyurl.com/4vkkkex4 -O palworld-save-export.sh
+chmod +x palworld-save-export.sh
+sudo ./palworld-save-export.sh
+
 ```
 
 See the [Proxmox guide](../../guides/how-to_ultimate_proxmox.md) in the repo for creating a cloud-init VM and using the console.

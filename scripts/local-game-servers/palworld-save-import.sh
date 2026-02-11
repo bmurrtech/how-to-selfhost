@@ -1,8 +1,8 @@
 #!/bin/bash
 # palworld-save-import.sh — Import Palworld world save from a public URL (zip).
 # Run on the game server (SSH or Proxmox console). Requires sudo.
-# Usage: sudo PAL_INSTALL_DIR=/home/steam/palserver ./palworld-save-import.sh <URL>
-# Do not upload WorldOption.sav in the zip; it can override server config.
+# Usage: sudo PAL_INSTALL_DIR=/home/steam/palserver ./palworld-save-import.sh [URL]
+# If URL is omitted and stdin is a TTY, prompts for URL. Do not upload WorldOption.sav in the zip.
 
 set -euo pipefail
 
@@ -34,12 +34,22 @@ cleanup_and_exit() {
 trap cleanup_and_exit EXIT
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <URL of zip containing world save>"
-  echo "Example: $0 https://storage.googleapis.com/your-bucket/palworld-world.zip"
-  exit 1
+  if [[ -t 0 ]]; then
+    echo "URL of zip containing world save (or press Enter to show usage):"
+    read -r URL
+    if [[ -z "${URL:-}" ]]; then
+      echo "Usage: $0 <URL of zip containing world save>"
+      echo "Example: $0 https://storage.googleapis.com/your-bucket/palworld-world.zip"
+      exit 1
+    fi
+  else
+    echo "Usage: $0 <URL of zip containing world save>"
+    echo "Example: $0 https://storage.googleapis.com/your-bucket/palworld-world.zip"
+    exit 1
+  fi
+else
+  URL="$1"
 fi
-
-URL="$1"
 
 if [[ "$EUID" -ne 0 ]]; then
   echo "This script must be run as root (sudo) to stop/start the service and set ownership."
