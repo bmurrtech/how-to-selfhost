@@ -103,18 +103,23 @@ When running **config-palworld.sh** in **advanced mode**, use the following as a
 | **Time (h) to incubate Massive Egg** | Number from **0 to 240** | 1 |
 | **Enable Raid Events** | **1**=Off **2**=On (or off/on) | On |
 | **Enable Predator Pals** | **1**=Off **2**=On (or off/on) | On |
+| **Respawn cooldown (seconds)** | Number from **10 to 300** | 10 |
 | **Death Penalty** | **1**=No Drops **2**=Drop all items except equipment **3**=Drop all items **4**=Drop all items and all Pals | 2 |
+| **Max base camps (performance)** | Integer from **1 to 128** | 64 |
 | **Max Guild Members** | Integer from **1 to 100** | 20 |
 | **Max bases per guild** | Integer from **2 to 10** | 6 |
 | **Max Work Pals at Base** | Integer from **1 to 50** | 30 |
 | **Max Structures per Base** | **1**=400 **2**=500 **3**=2000 **4**=5000 **5**=10000 **6**=No limit | 5 (10000) |
+| **Auto delete guild when no one logs in** | **1**=Off **2**=On (recommend Off) | Off |
 | **Enable Fast Travel** | **1**=Off **2**=On | On |
 | **Restrict Fast Travel to Bases Only** | **1**=Off **2**=On | Off |
 | **Allow Pal genetic data in Global Palbox** | **1**=Off **2**=On | On |
+| **Allow loading from Global Palbox** | **1**=Off **2**=On | On |
+| **Work speed multiplier** | Number from **0.1 to 5** | 1.5 |
 
 ### Settings before world creation
 
-These **cannot be applied after the world exists**; set them in **palworld.sh** (or preset scripts) during initial setup, or use **palworld-custom.sh** to configure before first start.
+These **cannot be applied after the world exists**; set them in **palworld.sh** (or preset scripts) during initial setup, or use **palworld-custom.sh** to configure before first start. **config-palworld.sh** does not prompt for them (they are reserved for the install/first-setup scripts). When you run the config wizard on an existing server, any existing values for these keys are preserved in the written INI.
 
 | Setting | Input | Default |
 |--------|--------|--------|

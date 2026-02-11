@@ -184,8 +184,8 @@ prompt_death_penalty() {
   while true; do
     echo ""
     echo "--- Death Penalty (DeathPenalty) ---"
-    echo "  Options: 1=No Drops  2=Drop all items except equipment  3=Drop all items  4=Drop all items and all Pals. Default: 2"
-    read -r -p "  Death Penalty [1-4] (default 2): " val
+    echo "  1=No Drops  2=Drop all items except equipment  3=Drop all items  4=Drop all items and all Pals. Default: 2"
+    read -r -p "  Death Penalty [1=No Drops 2=Drop items except equipment 3=Drop all 4=Drop all+Pals] (default 2): " val
     val="${val:-$default}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
@@ -202,25 +202,6 @@ prompt_death_penalty_item_default() {
   prompt_death_penalty "Item"
 }
 
-# Random Pal Mode (RandomizerType): None, Region, All
-prompt_randomizer_type() {
-  local val
-  while true; do
-    echo ""
-    echo "--- Random Pal Mode (RandomizerType) ---"
-    echo "  Options: 1=None  2=Region (per region)  3=All (fully random). Default: 1"
-    read -r -p "  Random Pal Mode [1=None 2=Region 3=All] (default 1): " val
-    val="${val:-1}"
-    val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
-    case "$val" in
-      1|none) echo "RandomizerType=None"; return 0 ;;
-      2|region) echo "RandomizerType=Region"; return 0 ;;
-      3|all) echo "RandomizerType=All"; return 0 ;;
-    esac
-    echo "  Invalid. Enter 1-3 or: None, Region, All"
-  done
-}
-
 # Crossplay platforms (CrossplayPlatforms)
 prompt_crossplay() {
   local default="(Steam,Xbox,PS5,Mac)"
@@ -232,6 +213,23 @@ prompt_crossplay() {
   val="${val//\\/\\\\}"
   val="${val//\"/\\\"}"
   echo "CrossplayPlatforms=\"$val\""
+}
+
+# Auto delete guild when no one logs in — with caution (recommend False)
+prompt_bool_auto_reset_guild() {
+  local key="bAutoResetGuildNoOnlinePlayers" label="Auto delete guild when no one logs in" default="False"
+  local val out
+  while true; do
+    echo ""
+    echo "--- $label ($key) ---"
+    echo "  CAUTION: If On, the guild (and its bases/Pals) can be deleted after no one has logged in for the set hours. Recommend: Off (default)."
+    echo "  Options: 1=Off  2=On. Default: $default"
+    read -r -p "  $label [1=Off 2=On] (default $default): " val
+    val="${val:-$default}"
+    out="$(normalize_bool "$val" 2>/dev/null)" && break
+    echo "  Invalid. Enter 1=Off, 2=On, or off/on/true/false."
+  done
+  echo "$key=$out"
 }
 
 # ----- Main -----
@@ -332,8 +330,7 @@ echo ""
 echo "=== PvP and combat ==="
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsPvP" "Enable PvP" "False")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_death_penalty_item_default)"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bPalLost" "Hardcore Pal Mode (lose Pals on death)" "False")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "BlockRespawnTime" "Respawn cooldown (seconds)" "300.000000" "seconds after death")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "BlockRespawnTime" "Respawn cooldown (seconds)" "10" "10" "300")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableInvaderEnemy" "Enable Raid Events" "True")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnablePredatorBossPal" "Enable Predator Pals" "True")"
 
@@ -413,12 +410,12 @@ prompt_max_structures() {
 # --- Bases and guild ---
 echo ""
 echo "=== Bases and guild ==="
-OUTPUT="$OUTPUT"$'\n'"$(prompt_int "BaseCampMaxNum" "Max base camps (performance)" "128" "integer")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampMaxNum" "Max base camps (performance)" "64" "1" "128")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampWorkerMaxNum" "Max Work Pals at Base" "30" "1" "50")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "BaseCampMaxNumInGuild" "Max bases per guild" "6" "2" "10")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_int_range "GuildPlayerMaxNum" "Max Guild Members" "20" "1" "100")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAutoResetGuildNoOnlinePlayers" "Auto delete guild when no one logs in" "False")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "AutoResetGuildTimeNoOnlinePlayers" "Hours offline before guild auto-reset" "72.000000" "hours (if above enabled)")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool_auto_reset_guild)"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float "AutoResetGuildTimeNoOnlinePlayers" "Hours offline before guild auto-reset" "72.000000" "hours (only if auto-reset above is On)")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_max_structures)"
 
 # --- Features ---
@@ -428,14 +425,10 @@ OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableFastTravel" "Enable Fast Travel" "Tr
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bEnableFastTravelOnlyBaseCamp" "Restrict Fast Travel to Bases Only" "False")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsStartLocationSelectByMap" "Choose start location on map" "True")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bExistPlayerAfterLogout" "Players sleep at logout location" "False")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bHardcore" "Hardcore mode (no respawn on death)" "False")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bShowPlayerList" "Show player list in ESC menu" "True")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxExport" "Allow Pal genetic data in Global Palbox" "True")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxImport" "Allow loading from Global Palbox" "False")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_randomizer_type)"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_string "RandomizerSeed" "Randomizer seed" "" "string or word if Random Pal Mode enabled (e.g. tomato)")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bIsRandomizerPalLevelRandom" "Wild Pal levels fully random" "False")"
-OUTPUT="$OUTPUT"$'\n'"$(prompt_float "WorkSpeedRate" "Work speed multiplier" "1.000000" "number")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_bool "bAllowGlobalPalboxImport" "Allow loading from Global Palbox" "True")"
+OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "WorkSpeedRate" "Work speed multiplier" "1.5" "0.1" "5")"
 OUTPUT="$OUTPUT"$'\n'"$(prompt_float_range "ServerReplicatePawnCullDistance" "Pal sync distance from players (cm)" "15000.000000" "5000" "15000")"
 
 # Write INI: use [/Script/Pal.PalGameWorldSettings] and OptionSettings= for compatibility
@@ -451,6 +444,19 @@ while IFS= read -r line; do
     OPTIONS="$OPTIONS,$line"
   fi
 done <<< "$OUTPUT"
+
+# Preserve before-world-only settings (cannot be changed post-deploy); set in palworld.sh / palworld-custom.sh / palworld-hardcore.sh
+if [[ -f "$CONFIG_FILE" ]]; then
+  optline="$(grep "^OptionSettings=" "$CONFIG_FILE" 2>/dev/null || true)"
+  if [[ -n "$optline" ]]; then
+    for key in bHardcore bPalLost bCharacterRecreateInHardcore RandomizerType bIsRandomizerPalLevelRandom; do
+      pair="$(echo "$optline" | grep -oE "${key}=[^,)]+" 2>/dev/null || true)"
+      if [[ -n "$pair" ]]; then OPTIONS="$OPTIONS,$pair"; fi
+    done
+    pair="$(echo "$optline" | grep -oE 'RandomizerSeed="[^"]*"' 2>/dev/null || true)"
+    if [[ -n "$pair" ]]; then OPTIONS="$OPTIONS,$pair"; fi
+  fi
+fi
 
 {
   echo "[/Script/Pal.PalGameWorldSettings]"
