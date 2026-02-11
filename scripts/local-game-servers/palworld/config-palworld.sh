@@ -53,7 +53,7 @@ normalize_bool() {
   esac
 }
 
-# label = human-readable name; key = INI key. note = what to enter (e.g. "number, e.g. 1.0").
+# label = human-readable name (README); key = INI key. note = what to enter.
 prompt_float() {
   local key="$1" label="$2" default="$3" note="$4"
   local val
@@ -61,7 +61,7 @@ prompt_float() {
     echo ""
     echo "--- $label ($key) ---"
     echo "  Enter: $note"
-    read -r -p "  Value (default: $default): " val
+    read -r -p "  $label (default: $default): " val
     val="${val:-$default}"
     val="$(normalize_float "$val" 2>/dev/null)" && break
     echo "  Invalid. Enter a number (e.g. 1.0 or 1.5)."
@@ -69,7 +69,7 @@ prompt_float() {
   echo "$key=$val"
 }
 
-# label = human-readable name; key = INI key. note = what to enter (e.g. "integer 4-32").
+# label = human-readable name (README); key = INI key. note = what to enter.
 prompt_int() {
   local key="$1" label="$2" default="$3" note="$4"
   local val
@@ -77,7 +77,7 @@ prompt_int() {
     echo ""
     echo "--- $label ($key) ---"
     echo "  Enter: $note"
-    read -r -p "  Value (default: $default): " val
+    read -r -p "  $label (default: $default): " val
     val="${val:-$default}"
     val="$(normalize_int "$val" 2>/dev/null)" && break
     echo "  Invalid. Enter an integer (e.g. 16 or 0)."
@@ -93,7 +93,7 @@ prompt_float_range() {
     echo ""
     echo "--- $label ($key) ---"
     echo "  Options: number from $min to $max. Default: $default"
-    read -r -p "  Enter ($min-$max, default $default): " val
+    read -r -p "  $label ($min-$max, default $default): " val
     val="${val:-$default}"
     val="$(clamp_float "$val" "$min" "$max" 2>/dev/null)" && break
     echo "  Invalid. Enter a number between $min and $max (e.g. $default)."
@@ -109,7 +109,7 @@ prompt_int_range() {
     echo ""
     echo "--- $label ($key) ---"
     echo "  Options: integer from $min to $max. Default: $default"
-    read -r -p "  Enter ($min-$max, default $default): " val
+    read -r -p "  $label ($min-$max, default $default): " val
     val="${val:-$default}"
     val="$(normalize_int "$val" 2>/dev/null)" || true
     if [[ -n "$val" ]] && [[ "$val" -ge "$min" ]] && [[ "$val" -le "$max" ]]; then
@@ -129,7 +129,7 @@ prompt_bool() {
     echo ""
     echo "--- $label ($key) ---"
     echo "  Options: 1=Off  2=On (or off/on, 0/1, false/true). Default: $default"
-    read -r -p "  Enter 1 or 2 (default $default): " val
+    read -r -p "  $label [1=Off 2=On] (default $default): " val
     val="${val:-$default}"
     out="$(normalize_bool "$val" 2>/dev/null)" && break
     echo "  Invalid. Enter 1=Off, 2=On, or off/on/true/false."
@@ -137,13 +137,13 @@ prompt_bool() {
   echo "$key=$out"
 }
 
-# label = human-readable name; key = INI key. note = what to enter (e.g. "any string, or leave empty").
+# label = human-readable name (README); key = INI key. note = what to enter.
 prompt_string() {
   local key="$1" label="$2" default="$3" note="$4"
   echo ""
   echo "--- $label ($key) ---"
   echo "  Enter: $note"
-  read -r -p "  Value (default: $default): " val
+  read -r -p "  $label (default: $default): " val
   val="${val:-$default}"
   val="${val//\\/\\\\}"
   val="${val//\"/\\\"}"
@@ -185,7 +185,7 @@ prompt_death_penalty() {
     echo ""
     echo "--- Death Penalty (DeathPenalty) ---"
     echo "  Options: 1=No Drops  2=Drop all items except equipment  3=Drop all items  4=Drop all items and all Pals. Default: 2"
-    read -r -p "  Enter 1-4 (default 2): " val
+    read -r -p "  Death Penalty [1-4] (default 2): " val
     val="${val:-$default}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
@@ -209,7 +209,7 @@ prompt_randomizer_type() {
     echo ""
     echo "--- Random Pal Mode (RandomizerType) ---"
     echo "  Options: 1=None  2=Region (per region)  3=All (fully random). Default: 1"
-    read -r -p "  Enter 1-3 (default 1): " val
+    read -r -p "  Random Pal Mode [1=None 2=Region 3=All] (default 1): " val
     val="${val:-1}"
     val="$(echo "$val" | tr '[:upper:]' '[:lower:]' | tr -d ' \t')"
     case "$val" in
@@ -227,7 +227,7 @@ prompt_crossplay() {
   echo ""
   echo "--- Crossplay platforms (CrossplayPlatforms) ---"
   echo "  Enter: platforms in parentheses, e.g. (Steam,Xbox,PS5,Mac)"
-  read -r -p "  Value (default: $default): " val
+  read -r -p "  Crossplay platforms (default: $default): " val
   val="${val:-$default}"
   val="${val//\\/\\\\}"
   val="${val//\"/\\\"}"
@@ -342,7 +342,7 @@ prompt_autosave() {
   echo ""
   echo "--- Autosave interval (AutoSaveSpan) ---"
   echo "  Options: 1=30s  2=1m  3=5m  4=10m  5=15m  6=30m. Default: 3 (5m)"
-  read -r -p "  Enter 1-6 (default 3): " choice
+  read -r -p "  Autosave interval [1=30s 2=1m 3=5m 4=10m 5=15m 6=30m] (default 3): " choice
   choice="${choice:-3}"
   case "$(echo "$choice" | tr -d ' \t')" in
     1) echo "AutoSaveSpan=30.000000"; return 0 ;;
@@ -397,7 +397,7 @@ prompt_max_structures() {
   echo ""
   echo "--- Max Structures per Base (MaxBuildingLimitNum) ---"
   echo "  Options: 1=400  2=500  3=2000  4=5000  5=10000  6=No limit. Default: 5 (10000)"
-  read -r -p "  Enter 1-6 (default 5): " choice
+  read -r -p "  Max Structures per Base [1=400 2=500 3=2000 4=5000 5=10000 6=No limit] (default 5): " choice
   choice="${choice:-5}"
   case "$(echo "$choice" | tr -d ' \t')" in
     1) echo "MaxBuildingLimitNum=400"; return 0 ;;
