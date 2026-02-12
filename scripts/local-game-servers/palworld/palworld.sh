@@ -8,6 +8,19 @@
 
 set -euo pipefail
 
+# Option flags: one of --casual | --normal | --hard | --hardcore; no flag = default/vanilla
+PALWORLD_PRESET=""
+for arg in "$@"; do
+  case "$arg" in
+    --casual)   PALWORLD_PRESET=casual; break ;;
+    --normal)   PALWORLD_PRESET=normal; break ;;
+    --hard)     PALWORLD_PRESET=hard; break ;;
+    --hardcore) PALWORLD_PRESET=hardcore; break ;;
+    --help|-h)  echo "Usage: sudo $0 [--casual|--normal|--hard|--hardcore]"; echo ""; echo "  --casual   Easier rates, less penalty"; echo "  --normal   Balanced defaults"; echo "  --hard     Harder rates, more penalty"; echo "  --hardcore No respawn, permanent Pal loss, etc."; echo "  No flag    Default/vanilla server settings"; echo ""; exit 0 ;;
+    *)          echo "Unknown option: $arg. Use --help for usage."; exit 1 ;;
+  esac
+done
+
 PAL_APP_ID=2394010
 INSTALL_DIR_DEFAULT="/home/steam/palserver"
 LAN_CIDR_DEFAULT="192.168.1.0/24"
@@ -96,11 +109,19 @@ fi
 
 echo "Using steam user: $(id steam -u) ($(id steam -g))"
 
-# Optional: PALWORLD_PRESET=casual|normal|hard|hardcore (set by palworld-casual.sh etc.)
-PALWORLD_PRESET="${PALWORLD_PRESET:-}"
 if [[ -n "$PALWORLD_PRESET" ]]; then
-  echo "Preset mode: $PALWORLD_PRESET"
+  echo "Difficulty preset: $PALWORLD_PRESET"
 fi
+
+echo ""
+echo "You can configure all world settings now (advanced mode), or use the preset/default and change most settings later via config-palworld.sh."
+echo "See README.md for settings that cannot be changed after world creation (e.g. Hardcore mode)."
+read -p "Configure all world settings now (advanced mode)? [y/N]: " do_advanced_setup
+if [[ "${do_advanced_setup:-n}" =~ ^[Yy] ]]; then
+  PALWORLD_CUSTOM=1
+  echo "Advanced mode: full configuration wizard will run before first server start."
+fi
+echo ""
 
 #############################################
 # 3. Installation Directory Setup
@@ -295,7 +316,7 @@ if [[ ! "${set_before_world:-y}" =~ ^[Nn] ]]; then
   sed -i "s/bCharacterRecreateInHardcore=[^,)]*/bCharacterRecreateInHardcore=$CHAR_RECREATE/" "$CONFIG_FILE" 2>/dev/null || true
   echo "✓ Before-world settings written. Start the server only after this."
 else
-  echo "Skipped. You can set these in PalWorldSettings.ini before first start, or use a preset script (e.g. palworld-hardcore.sh)."
+  echo "Skipped. You can set these in PalWorldSettings.ini before first start, or re-run with a difficulty flag (e.g. --hardcore) or choose advanced mode."
 fi
 fi
 # end if not preset

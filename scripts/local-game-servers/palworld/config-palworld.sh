@@ -445,7 +445,7 @@ while IFS= read -r line; do
   fi
 done <<< "$OUTPUT"
 
-# Preserve before-world-only settings (cannot be changed post-deploy); set in palworld.sh / palworld-custom.sh / palworld-hardcore.sh
+# Preserve before-world-only settings (cannot be changed post-deploy); set in palworld.sh during setup
 if [[ -f "$CONFIG_FILE" ]]; then
   optline="$(grep "^OptionSettings=" "$CONFIG_FILE" 2>/dev/null || true)"
   if [[ -n "$optline" ]]; then

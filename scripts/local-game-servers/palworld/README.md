@@ -6,12 +6,12 @@ Scripts to install, configure, and manage a Palworld dedicated server on Linux (
 
 ## ⚠ Overwrite warning
 
-**Running any of the creation/install scripts (`palworld.sh`, `palworld-normal.sh`, `palworld-casual.sh`, `palworld-hard.sh`, `palworld-hardcore.sh`, `palworld-custom.sh`) will overwrite existing server state.** The script will:
+**Running `palworld.sh` will overwrite existing server state** at the chosen install path. The script will:
 
-- **Erase any existing server worlds and save data** at the chosen install path (e.g. `/home/steam/palserver`).
-- **Replace server configuration** with the new run’s settings (preset or wizard).
+- **Erase any existing server worlds and save data** (e.g. under `/home/steam/palserver`).
+- **Replace server configuration** with the new run’s settings (preset or advanced wizard).
 
-The script asks for confirmation before proceeding: **Continue? (will erase any existing server worlds and start over completely) [y/N]** — you must answer **y** to continue. Use these scripts on a clean machine for a new server, or when you intentionally want to wipe and recreate the server at that path. Back up any worlds you want to keep (e.g. with `export-palworld-save.sh`) before running an install script.
+The script asks for confirmation before proceeding: **Continue? (will erase any existing server worlds and start over completely) [y/N]** — you must answer **y** to continue. Use it on a clean machine for a new server, or when you intentionally want to wipe and recreate the server at that path. Back up any worlds you want to keep (e.g. with `export-palworld-save.sh`) before running the install script.
 
 ---
 
@@ -19,7 +19,7 @@ The script asks for confirmation before proceeding: **Continue? (will erase any 
 
 | Path | When to use | What you do |
 |------|-------------|-------------|
-| **[Path A: New server](#path-a-new-server)** | You want a fresh dedicated server with no existing world. | Install the server with one of the creation scripts; optionally run the config wizard. No import or host fix. |
+| **[Path A: New server](#path-a-new-server)** | You want a fresh dedicated server with no existing world. | Run the install script with an optional difficulty flag; optionally use advanced mode to configure all settings at setup. No import or host fix. |
 | **[Path B: Use existing world (co-op / single-player)](#path-b-use-existing-world-co-op--single-player)** | You have a co-op or single-player save and want to move it to a dedicated server. | Install the server (if needed), import your world, then run the host fix so the host character loads. |
 
 See the [main README](../README.md) for prerequisites and troubleshooting.
@@ -28,28 +28,41 @@ See the [main README](../README.md) for prerequisites and troubleshooting.
 
 ## Path A: New server
 
-**Summary:** Create a new dedicated server. No world import or host fix. **Running any install script will overwrite existing worlds and config at the chosen path** (see [Overwrite warning](#-overwrite-warning)).
+**Summary:** Create a new dedicated server. No world import or host fix. **Running the install script overwrites existing worlds and config at the chosen path** (see [Overwrite warning](#-overwrite-warning)).
 
-1. **Create the server** — On the game host (SSH or Proxmox console), download and run **one** of the install scripts. Each creates the server under `/home/steam/palserver` (or your choice) and sets up systemd + UFW.
+1. **Create the server** — On the game host (SSH or Proxmox console), download and run the install script. It creates the server under `/home/steam/palserver` (or your choice) and sets up systemd + UFW.
 
-   | If you want… | Script |
-   |--------------|--------|
-   | **Casual** (easier rates) | [palworld-casual.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-casual.sh) |
-   | **Normal** (balanced) | [palworld-normal.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh) |
-   | **Hard** | [palworld-hard.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-hard.sh) |
-   | **Hardcore** (no respawn, etc.) | [palworld-hardcore.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-hardcore.sh) |
-   | **Custom** (wizard at setup) | [palworld-custom.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-custom.sh) |
-   | **Default / vanilla** | [palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh) |
+   **Difficulty:** Pass at most one flag. No flag = default/vanilla.
 
-   Example:
+   | Flag | Effect |
+   |------|--------|
+   | `--casual` | Easier rates, less penalty |
+   | `--normal` | Balanced defaults |
+   | `--hard` | Harder rates, more penalty |
+   | `--hardcore` | No respawn, permanent Pal loss, etc. |
+
+   During setup you’ll be asked whether to **configure all world settings now (advanced mode)**. If you choose yes, the full configuration wizard runs before the first server start. Most settings can be changed later via **config-palworld.sh**; see [Settings before world creation](#settings-before-world-creation) for options that cannot be changed after the world exists (e.g. Hardcore mode).
+
+   **How to run:**
+
    ```bash
    mkdir -p ~/scripts && cd ~/scripts
-   wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh -O palworld-normal.sh
-   chmod +x palworld-normal.sh
-   sudo ./palworld-normal.sh
+   # You can use either of these URLs to download the install script:
+   wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh -O palworld.sh
+   # Or via TinyURL mirror:
+   wget https://tinyurl.com/mrxu3ujx -O palworld.sh
+
+   chmod +x palworld.sh
+   sudo ./palworld.sh              # default/vanilla
+   # Or with a difficulty preset:
+   sudo ./palworld.sh --casual
+   sudo ./palworld.sh --normal
+   sudo ./palworld.sh --hard
+   sudo ./palworld.sh --hardcore
+   sudo ./palworld.sh --help       # show usage
    ```
 
-2. **Optional: change settings later** — Use [config-palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh) to adjust difficulty, rates, and server options. Download, `chmod +x`, then run `sudo ./config-palworld.sh` (it stops the server, applies changes, then can start it again).
+2. **Optional: change settings later** — Use [config-palworld.sh](config-palworld.sh) to adjust difficulty, rates, and server options. Run `sudo ./config-palworld.sh` (it stops the server, applies changes, then can start it again).
 
 No import or host fix scripts are required for Path A.
 
@@ -80,8 +93,8 @@ mkdir -p ~/scripts
 cd ~/scripts
 ```
 
-- **Creation (Path A):** [palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh) · [palworld-normal.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh) · [palworld-custom.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-custom.sh) (and other presets from the table above).
-- **Optional config:** [config-palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh)
+- **Creation (Path A):** [palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh) — run with optional `--casual`, `--normal`, `--hard`, or `--hardcore`.
+- **Optional config (after install):** [config-palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh)
 - **Path B (existing world):** [import-palworld-save.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/import-palworld-save.sh) · [host-palworld-fix.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/host-palworld-fix.sh)
 - **Backup:** [export-palworld-save.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/export-palworld-save.sh)
 
@@ -91,10 +104,10 @@ Example: `wget <URL> -O script.sh && chmod +x script.sh && sudo ./script.sh`
 
 ### Modes and settings controls
 
-- **Simple mode (default):** Choose **1=casual**, **2=normal**, **3=hard**, or **4=hardcore**. One preset is written; no per-setting prompts.
-- **Advanced mode:** Custom difficulty; every setting is prompted with **options or number ranges** (see below). You can enter the number for multiple-choice (e.g. **1–6** for autosave) or a value within the range for numeric settings. Use when you need fine-grained control.
+- **Preset (flag):** Run `palworld.sh` with `--casual`, `--normal`, `--hard`, or `--hardcore` to apply one difficulty preset; no per-setting prompts.
+- **Advanced mode:** When running `palworld.sh`, answer **y** to “Configure all world settings now (advanced mode)?” to run the full configuration wizard before the first server start. You can change most settings later via **config-palworld.sh**; see [Settings before world creation](#settings-before-world-creation) for options that cannot be changed after the world exists.
 
-Some settings **must be set before the first world creation** (see [Settings before world creation](#settings-before-world-creation)); they cannot be applied retroactively. The main install script (`palworld.sh`) and preset scripts prompt for these during setup. For custom config at setup time, use **palworld-custom.sh**.
+Some settings **must be set before the first world creation** (see [Settings before world creation](#settings-before-world-creation)); they cannot be applied retroactively. Set them during `palworld.sh` setup (preset or advanced mode) or in `PalWorldSettings.ini` before the first start.
 
 ### Advanced mode: options reference
 
@@ -150,7 +163,7 @@ When running **config-palworld.sh** in **advanced mode**, use the following as a
 
 ### Settings before world creation
 
-These **cannot be applied after the world exists**; set them in **palworld.sh** (or preset scripts) during initial setup, or use **palworld-custom.sh** to configure before first start. **config-palworld.sh** does not prompt for them (they are reserved for the install/first-setup scripts). When you run the config wizard on an existing server, any existing values for these keys are preserved in the written INI.
+These **cannot be applied after the world exists**; set them in **palworld.sh** during initial setup (preset flag or advanced mode). **config-palworld.sh** does not prompt for them (they are reserved for the install script). When you run the config wizard on an existing server, any existing values for these keys are preserved in the written INI.
 
 | Setting | Input | Default |
 |--------|--------|--------|
