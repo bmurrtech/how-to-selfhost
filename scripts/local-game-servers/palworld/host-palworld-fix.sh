@@ -157,7 +157,8 @@ python3 - "$WORLD_PATH" "$OLD_SAV" "$NEW_SAV" "$OLD_FMT" "$NEW_FMT" <<'PYTHON_SC
 import sys
 import zlib
 
-MAGIC = b"PlZ"
+# Level.sav uses b'PLM' (0x50 0x4C 0x4D); player saves use b'PlZ' (0x50 0x6c 0x5a). Match full 3-byte sequence.
+VALID_MAGICS = {b"PlZ", b"PLM"}
 
 def _err(path: str, msg: str, detail: str = "") -> None:
     out = f"{path}: {msg}"
@@ -183,11 +184,11 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         start = 24
     if magic == b"\x00\x00\x00" and uncompressed_len == 0 and compressed_len == 0:
         _err(path, "Header is all nulls; file may be empty or corrupted.", "(not a compressed Palworld save)")
-    if magic != MAGIC:
+    if magic not in VALID_MAGICS:
         _err(
             path,
-            "Invalid save header: expected PlZ magic (0x506c5a at bytes 8:11).",
-            f"Got bytes 8:11 = {magic!r} (hex: {magic.hex()}); file size = {len(data)}. File may be corrupted or from an unsupported format."
+            "Unsupported magic at bytes 8:11.",
+            f"Got {magic!r} (hex: {magic.hex()}); expected one of {VALID_MAGICS}. file size = {len(data)}."
         )
     if save_type not in (0x31, 0x32):
         _err(path, "Unhandled save type byte.", f"Expected 0x31 or 0x32, got 0x{save_type:02x}")
@@ -201,9 +202,11 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         _err(path, "Zlib decompress failed; data may be corrupted.", str(e))
     if len(raw) != uncompressed_len:
         _err(path, "Uncompressed length mismatch.", f"Expected {uncompressed_len}, got {len(raw)}")
-    return raw, save_type
+    return raw, save_type, magic
 
-def compress_sav(raw: bytes, save_type: int) -> bytes:
+def compress_sav(raw: bytes, save_type: int, magic: bytes) -> bytes:
+    if len(magic) != 3:
+        raise SystemExit(f"compress_sav: magic must be 3 bytes, got {len(magic)}")
     inner = zlib.compress(raw)
     compressed_len = len(inner)
     if save_type == 0x32:
@@ -213,7 +216,7 @@ def compress_sav(raw: bytes, save_type: int) -> bytes:
     out = bytearray()
     out.extend(len(raw).to_bytes(4, "little"))
     out.extend(compressed_len.to_bytes(4, "little"))
-    out.extend(MAGIC)
+    out.extend(magic)
     out.append(save_type)
     out.extend(compressed)
     return bytes(out)
@@ -225,11 +228,11 @@ def patch_file(path: str, old_fmt: str, new_fmt: str) -> None:
         raise SystemExit(f"{path}: GUID length mismatch.")
     with open(path, "rb") as f:
         data = f.read()
-    raw, save_type = decompress_sav(data, path)
+    raw, save_type, magic = decompress_sav(data, path)
     if old_b not in raw:
         raise SystemExit(f"{path}: GUID string {old_fmt!r} not found in decompressed data (save format may differ or file may be from another source).")
     raw = raw.replace(old_b, new_b)
-    out = compress_sav(raw, save_type)
+    out = compress_sav(raw, save_type, magic)
     with open(path, "wb") as f:
         f.write(out)
 
