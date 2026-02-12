@@ -2,59 +2,77 @@
 
 Scripts to install, configure, and manage a Palworld dedicated server on Linux (SteamCMD + systemd + UFW), including world save import/export and interactive server configuration. Scripts target **Palworld server 0.7.1**; parameters may change in future game versions.
 
-## How to download and run
+## Choose your path
 
-From the game server (SSH or Proxmox console), download the script(s) you need. Replace `~/scripts` with any directory you prefer.
+| Path | When to use | What you do |
+|------|-------------|-------------|
+| **[Path A: New server](#path-a-new-server)** | You want a fresh dedicated server with no existing world. | Install the server with one of the creation scripts; optionally run the config wizard. No import or host fix. |
+| **[Path B: Use existing world (co-op / single-player)](#path-b-use-existing-world-co-op--single-player)** | You have a co-op or single-player save and want to move it to a dedicated server. | Install the server (if needed), import your world, then run the host fix so the host character loads. |
 
-**Choose one install script for initial server creation:**
+See the [main README](../README.md) for prerequisites and troubleshooting.
 
-| If you want… | Download and run |
-|--------------|------------------|
-| **Casual** (easier rates, less penalty) | `palworld-casual.sh` |
-| **Normal** (balanced defaults) | `palworld-normal.sh` |
-| **Hard** (harder rates, more penalty) | `palworld-hard.sh` |
-| **Hardcore** (no respawn, permanent loss; all hardcore options on) | `palworld-hardcore.sh` |
-| **Custom** (full config wizard before first start) | `palworld-custom.sh` |
-| **Default / vanilla** (no PalWorldSettings preset; optional Admin password and REST API only) | `palworld.sh` |
+---
+
+## Path A: New server
+
+**Summary:** Create a new dedicated server. No world import or host fix.
+
+1. **Create the server** — On the game host (SSH or Proxmox console), download and run **one** of the install scripts. Each creates the server under `/home/steam/palserver` (or your choice) and sets up systemd + UFW.
+
+   | If you want… | Script |
+   |--------------|--------|
+   | **Casual** (easier rates) | [palworld-casual.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-casual.sh) |
+   | **Normal** (balanced) | [palworld-normal.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh) |
+   | **Hard** | [palworld-hard.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-hard.sh) |
+   | **Hardcore** (no respawn, etc.) | [palworld-hardcore.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-hardcore.sh) |
+   | **Custom** (wizard at setup) | [palworld-custom.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-custom.sh) |
+   | **Default / vanilla** | [palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh) |
+
+   Example:
+   ```bash
+   mkdir -p ~/scripts && cd ~/scripts
+   wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh -O palworld-normal.sh
+   chmod +x palworld-normal.sh
+   sudo ./palworld-normal.sh
+   ```
+
+2. **Optional: change settings later** — Use [config-palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh) to adjust difficulty, rates, and server options. Download, `chmod +x`, then run `sudo ./config-palworld.sh` (it stops the server, applies changes, then can start it again).
+
+No import or host fix scripts are required for Path A.
+
+---
+
+## Path B: Use existing world (co-op / single-player)
+
+**Summary:** You already have a world from co-op or single-player and want it (and the host character) on a dedicated server.
+
+1. **Have a dedicated server** — If you don’t yet have one, follow [Path A: New server](#path-a-new-server) first to create it.
+
+2. **Prepare your world on PC** — On Windows (Steam), your saves are under `%USERPROFILE%\AppData\Local\Pal\Saved\SaveGames`. Zip the **world folder** you want (the one with `Level.sav`, `LevelMeta.sav`, `Players/`, etc.). Do **not** include `WorldOption.sav`. Details: [Where Palworld saves live (Windows, Steam)](#where-palworld-saves-live-windows-steam).
+
+3. **Import the world** — Upload the zip to a URL, then on the server run the import script. It stops the server, extracts the save, fixes ownership, and restarts. See [Import from URL (import-palworld-save.sh)](#method-b-import-from-url-import-palworld-savesh).
+
+4. **Fix the host character** — The host’s co-op/single-player character is stored as `00000000000000000000000000000001.sav`; the dedicated server won’t use it until you run the host fix. Have the **host** join once and **create a new character** (so a new `.sav` appears), then stop the server and run the interactive host fix script. See [Fix co-op host save after import (host-palworld-fix.sh)](#fix-co-op-host-save-after-import-host-palworld-fixsh).
+
+5. **Start and play** — Start the server; the host joins again and should load their original character.
+
+---
+
+## How to download and run (script URLs)
+
+From the game server, download the script(s) you need. Replace `~/scripts` with any directory you prefer.
 
 ```bash
 mkdir -p ~/scripts
 cd ~/scripts
-
-# Example: install with Normal preset (choose the script that matches your desired mode)
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh -O palworld-normal.sh
-chmod +x palworld-normal.sh
-sudo ./palworld-normal.sh
-
-# Or: full custom config before first start (wizard runs at setup time)
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-custom.sh -O palworld-custom.sh
-chmod +x palworld-custom.sh
-sudo ./palworld-custom.sh
-
-# Or: default/vanilla install (no config preset; only Admin password and REST API prompts)
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh -O palworld.sh
-chmod +x palworld.sh
-sudo ./palworld.sh
 ```
 
-**Post-creation scripts (save import/export, or change config after server exists):**
+- **Creation (Path A):** [palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld.sh) · [palworld-normal.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-normal.sh) · [palworld-custom.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/palworld-custom.sh) (and other presets from the table above).
+- **Optional config:** [config-palworld.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh)
+- **Path B (existing world):** [import-palworld-save.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/import-palworld-save.sh) · [host-palworld-fix.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/host-palworld-fix.sh)
+- **Backup:** [export-palworld-save.sh](https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/export-palworld-save.sh)
 
-```bash
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/import-palworld-save.sh -O import-palworld-save.sh
-chmod +x import-palworld-save.sh
-
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/export-palworld-save.sh -O export-palworld-save.sh
-chmod +x export-palworld-save.sh
-
-# Download config-palworld.sh (original source or TinyURL mirror)
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/config-palworld.sh -O config-palworld.sh
-# Or, as an alternative:
-# wget https://tinyurl.com/8c4r3srf -O config-palworld.sh
-
-chmod +x config-palworld.sh
-```
-
-See the [main README](../README.md) for prerequisites and troubleshooting.
+Example: `wget <URL> -O script.sh && chmod +x script.sh && sudo ./script.sh`
 
 ---
 
@@ -224,6 +242,39 @@ Use this if you prefer to copy files directly from your PC to the server without
    Or run `sudo ./import-palworld-save.sh` and enter the URL when prompted. Optional: `PAL_INSTALL_DIR=/home/steam/palserver` if you used a different install path.
 
 The script stops the server, downloads the zip, extracts to the save directory, fixes ownership, updates `DedicatedServerName` if needed, and restarts the server. On failure it prints recovery steps.
+
+### Fix co-op host save after import (host-palworld-fix.sh)
+
+If you imported a **single-player or co-op** world, the host’s character is stored as `00000000000000000000000000000001.sav`. Dedicated servers use real player GUIDs, so the server does not recognize that file and forces the host to create a new character. Renaming the `.sav` file is not enough—the GUID is also stored inside the save data and in `Level.sav`.
+
+**When to use:** After you have run [Import from URL](#method-b-import-from-url-import-palworld-savesh), started the server, and had the **host** join and **create a new character** once. That creates a new `Players/<new-guid>.sav`. Then run the host fix so the host’s original character data is patched to that new GUID.
+
+**Steps:**
+
+1. Import the world and start the server; confirm the world loads (e.g. another player can join and see it).
+2. Have the **host** join and create a new character (this generates `Players/<new-guid>.sav`).
+3. Stop the server: `sudo systemctl stop palworld`
+4. Download and run the host fix script (interactive; no options required):
+   ```bash
+   wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/palworld/host-palworld-fix.sh -O host-palworld-fix.sh
+   chmod +x host-palworld-fix.sh
+   sudo ./host-palworld-fix.sh
+   ```
+
+   Or, using a TinyURL for convenience:
+   ```bash
+   wget https://tinyurl.com/4rssadkz -O host-palworld-fix.sh
+   chmod +x host-palworld-fix.sh
+   sudo ./host-palworld-fix.sh
+   ```
+   The script finds your world and lists all player `.sav` files. It defaults to **original host** = `00000000000000000000000000000001.sav` and **new character** = the first other file; press Enter to accept or choose different numbers. It then backs up the world, patches the save data (Python stdlib only; no pip packages), and restarts the server.
+5. Start the server if needed: `sudo systemctl start palworld`. The host joins again and should load their original character.
+
+**Troubleshooting:**
+
+- **Guild / Pals:** After the fix, if the host’s Pals do not work at the base, have the host drop and pick up each Pal (Party → Drop, then pick up) to re-register them. For full dedicated-server migrations where every player got a new GUID, see the upstream [palworld-host-save-fix](https://github.com/xNul/palworld-host-save-fix) notes on guild workarounds.
+- **Left-click / attack bug:** Some players need to leave the guild and rejoin once to fix attack input.
+- **Viewing Cage:** Not supported on dedicated servers; remove it from the co-op save before importing.
 
 ### Export / backup (export-palworld-save.sh)
 
