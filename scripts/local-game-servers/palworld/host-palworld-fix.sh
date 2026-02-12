@@ -159,9 +159,13 @@ import sys
 import zlib
 import json
 import time
+from typing import Optional
 
 # Level.sav uses b'PlM' (0x50 0x6c 0x4d); player saves use b'PlZ' (0x50 0x6c 0x5a). Match full 3-byte sequence.
 VALID_MAGICS = {b"PlZ", b"PlM"}
+# Valid zlib stream two-byte headers (CMF, FLG). Used to find real payload when it does not start at layout start.
+ZLIB_HEADERS = (b"\x78\x9c", b"\x78\xda", b"\x78\x01")
+MAX_ZLIB_SEARCH = 8192  # Max bytes after start to search for zlib stream (Level.sav can have intermediate header block).
 
 def _err(path: str, msg: str, detail: str = "") -> None:
     out = f"{path}: {msg}"
@@ -187,6 +191,39 @@ def _debug_log(debug_path: str, location: str, message: str, data: dict, hypothe
                 f.write(json.dumps(payload) + "\n")
         except Exception:
             pass
+
+def _payload_starts_zlib(payload: bytes) -> bool:
+    return len(payload) >= 2 and payload[:2] in ZLIB_HEADERS
+
+def find_zlib_offset(data: bytes, start: int, compressed_len: int, save_type: int, uncompressed_len: int) -> Optional[int]:
+    """Find offset of actual zlib stream after start by searching for 78 9c / 78 da / 78 01 and validating via decompress."""
+    search_end = min(start + MAX_ZLIB_SEARCH, len(data))
+    search_region = data[start:search_end]
+    for magic in ZLIB_HEADERS:
+        pos = 0
+        while True:
+            i = search_region.find(magic, pos)
+            if i == -1:
+                break
+            zlib_offset = start + i
+            if save_type == 0x31:
+                if zlib_offset + compressed_len > len(data):
+                    pos = i + 1
+                    continue
+                candidate = data[zlib_offset : zlib_offset + compressed_len]
+            else:
+                candidate = data[zlib_offset:]
+            try:
+                if save_type == 0x31:
+                    raw = zlib.decompress(candidate)
+                else:
+                    raw = zlib.decompress(zlib.decompress(candidate))
+                if len(raw) == uncompressed_len:
+                    return zlib_offset
+            except zlib.error:
+                pass
+            pos = i + 1
+    return None
 
 def decompress_sav(data: bytes, path: str = "", debug_path: str = "") -> tuple:
     if len(data) < 12:
@@ -231,6 +268,25 @@ def decompress_sav(data: bytes, path: str = "", debug_path: str = "") -> tuple:
     else:
         payload = data[start:]
     header = data[:start]
+    if not _payload_starts_zlib(payload) and layout == "standard":
+        zlib_offset = find_zlib_offset(data, start, compressed_len, save_type, uncompressed_len)
+        if zlib_offset is not None:
+            if save_type == 0x31:
+                payload = data[zlib_offset : zlib_offset + compressed_len]
+            else:
+                payload = data[zlib_offset:]
+            _debug_log(debug_path, "decompress_sav:zlib_offset_found", "Zlib stream not at layout start; found via search", {
+                "path": path, "layout_start": start, "zlib_offset": zlib_offset, "intermediate_bytes": zlib_offset - start,
+                "first_8_payload_hex": payload[:8].hex()
+            }, "H2")
+            if debug_path:
+                print("Zlib stream at offset", zlib_offset, "(intermediate bytes after header:", zlib_offset - start, ")", flush=True)
+        else:
+            _err(
+                path,
+                "Payload at layout start is not zlib and no valid zlib stream found.",
+                f"Layout={layout} start={start}. Searched first {MAX_ZLIB_SEARCH} bytes. First 8 payload bytes: {payload[:8].hex()}. Valid zlib starts with 78 9c / 78 da / 78 01."
+            )
     _debug_log(debug_path, "decompress_sav:after_layout", "Layout and payload slice", {
         "path": path, "layout": layout, "start": start, "save_type": save_type,
         "compressed_len": compressed_len, "uncompressed_len": uncompressed_len,
