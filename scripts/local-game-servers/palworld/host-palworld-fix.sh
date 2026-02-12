@@ -165,7 +165,7 @@ from typing import Optional
 VALID_MAGICS = {b"PlZ", b"PlM"}
 # Valid zlib stream two-byte headers (CMF, FLG). Used to find real payload when it does not start at layout start.
 ZLIB_HEADERS = (b"\x78\x9c", b"\x78\xda", b"\x78\x01")
-MAX_ZLIB_SEARCH = 8192  # Max bytes after start to search for zlib stream (Level.sav can have intermediate header block).
+MAX_ZLIB_SEARCH = 128 * 1024  # Max bytes after start to search (Level.sav can have ~69k intermediate block before zlib).
 
 def _err(path: str, msg: str, detail: str = "") -> None:
     out = f"{path}: {msg}"
@@ -206,22 +206,23 @@ def find_zlib_offset(data: bytes, start: int, compressed_len: int, save_type: in
             if i == -1:
                 break
             zlib_offset = start + i
+            candidates = []
             if save_type == 0x31:
-                if zlib_offset + compressed_len > len(data):
-                    pos = i + 1
-                    continue
-                candidate = data[zlib_offset : zlib_offset + compressed_len]
+                if zlib_offset + compressed_len <= len(data):
+                    candidates.append(data[zlib_offset : zlib_offset + compressed_len])
+                candidates.append(data[zlib_offset:])
             else:
-                candidate = data[zlib_offset:]
-            try:
-                if save_type == 0x31:
-                    raw = zlib.decompress(candidate)
-                else:
-                    raw = zlib.decompress(zlib.decompress(candidate))
-                if len(raw) == uncompressed_len:
-                    return zlib_offset
-            except zlib.error:
-                pass
+                candidates.append(data[zlib_offset:])
+            for candidate in candidates:
+                try:
+                    if save_type == 0x31:
+                        raw = zlib.decompress(candidate)
+                    else:
+                        raw = zlib.decompress(zlib.decompress(candidate))
+                    if len(raw) == uncompressed_len:
+                        return zlib_offset
+                except zlib.error:
+                    continue
             pos = i + 1
     return None
 
@@ -285,7 +286,7 @@ def decompress_sav(data: bytes, path: str = "", debug_path: str = "") -> tuple:
             _err(
                 path,
                 "Payload at layout start is not zlib and no valid zlib stream found.",
-                f"Layout={layout} start={start}. Searched first {MAX_ZLIB_SEARCH} bytes. First 8 payload bytes: {payload[:8].hex()}. Valid zlib starts with 78 9c / 78 da / 78 01."
+                f"Layout={layout} start={start}. Searched first {MAX_ZLIB_SEARCH} bytes. First 8 payload bytes: {payload[:8].hex()} (valid zlib: 78 9c / 78 da / 78 01). This save may use a different format (e.g. another game version). Try: pip install palworld-save-tools and the fix_host_save.py from https://github.com/xNul/palworld-host-save-fix"
             )
     _debug_log(debug_path, "decompress_sav:after_layout", "Layout and payload slice", {
         "path": path, "layout": layout, "start": start, "save_type": save_type,

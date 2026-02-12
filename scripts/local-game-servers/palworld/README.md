@@ -272,6 +272,7 @@ If you imported a **single-player or co-op** world, the host’s character is st
 
 **Troubleshooting:**
 
+- **“Payload at layout start is not zlib” / “no valid zlib stream found”:** The save may be from a different game version or use another format (e.g. payload at byte 12 is not standard zlib). If the script cannot find a valid zlib stream, use the upstream tool: `pip install palworld-save-tools` and [fix_host_save.py](https://github.com/xNul/palworld-host-save-fix) (requires Python and the palworld-save-tools dependency).
 - **Guild / Pals:** After the fix, if the host’s Pals do not work at the base, have the host drop and pick up each Pal (Party → Drop, then pick up) to re-register them. For full dedicated-server migrations where every player got a new GUID, see the upstream [palworld-host-save-fix](https://github.com/xNul/palworld-host-save-fix) notes on guild workarounds.
 - **Left-click / attack bug:** Some players need to leave the guild and rejoin once to fix attack input.
 - **Viewing Cage:** Not supported on dedicated servers; remove it from the co-op save before importing.
