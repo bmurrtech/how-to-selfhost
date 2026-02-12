@@ -11,15 +11,18 @@ set -euo pipefail
 
 PAL_INSTALL_DIR="${PAL_INSTALL_DIR:-/home/steam/palserver}"
 SAVE_BASE="$PAL_INSTALL_DIR/Pal/Saved/SaveGames/0"
+# Co-op/single-player host save ID (game constant); default "original" choice. Not PII.
 HOST_SAVE_DEFAULT="00000000000000000000000000000001"
 
 log() { echo "[host-palworld-fix] $*"; }
 log_err() { echo "[host-palworld-fix] $*" >&2; }
 
-# Resolve world folder: first directory under SaveGames/0 (or single one)
+# Resolve world folder: first directory under SaveGames/0, excluding backup folders (.bak).
+# Import and host-fix scripts create backups like <world>.bak-<timestamp>; we must use the
+# live world so all current player .sav files (including 000...001) are listed.
 resolve_world_folder() {
   local first
-  first="$(find "$SAVE_BASE" -maxdepth 1 -type d ! -path "$SAVE_BASE" 2>/dev/null | head -1)"
+  first="$(find "$SAVE_BASE" -maxdepth 1 -type d ! -path "$SAVE_BASE" ! -name '*.bak*' 2>/dev/null | sort | head -1)"
   if [[ -n "$first" ]]; then
     basename "$first"
   else
