@@ -153,9 +153,12 @@ OLD_FMT="$(format_guid "$OLD_GUID")"
 NEW_FMT="$(format_guid "$NEW_GUID")"
 
 log "Patching save files (replace host GUID in player save and Level.sav)..."
-python3 - "$WORLD_PATH" "$OLD_SAV" "$NEW_SAV" "$OLD_FMT" "$NEW_FMT" <<'PYTHON_SCRIPT'
+DEBUG_LOG="${HOST_PALWORLD_FIX_DEBUG_LOG:-}"
+python3 - "$WORLD_PATH" "$OLD_SAV" "$NEW_SAV" "$OLD_FMT" "$NEW_FMT" "$DEBUG_LOG" <<'PYTHON_SCRIPT'
 import sys
 import zlib
+import json
+import time
 
 # Level.sav uses b'PlM' (0x50 0x6c 0x4d); player saves use b'PlZ' (0x50 0x6c 0x5a). Match full 3-byte sequence.
 VALID_MAGICS = {b"PlZ", b"PlM"}
@@ -164,9 +167,28 @@ def _err(path: str, msg: str, detail: str = "") -> None:
     out = f"{path}: {msg}"
     if detail:
         out += f" {detail}"
-    raise SystemExit(out)
+    print(f"[ERROR] {out}", file=sys.stderr, flush=True)
+    sys.exit(1)
 
-def decompress_sav(data: bytes, path: str = "") -> tuple:
+def _debug_log(debug_path: str, location: str, message: str, data: dict, hypothesis_id: str = "") -> None:
+    if not debug_path:
+        return
+    line = f"[DEBUG] {location}: {message} :: {data}"
+    if hypothesis_id:
+        line += f" (hypothesisId={hypothesis_id})"
+    if debug_path == "stdout":
+        print(line, flush=True)
+    else:
+        payload = {"id": f"log_{int(time.time()*1000)}", "timestamp": int(time.time() * 1000), "location": location, "message": message, "data": data}
+        if hypothesis_id:
+            payload["hypothesisId"] = hypothesis_id
+        try:
+            with open(debug_path, "a") as f:
+                f.write(json.dumps(payload) + "\n")
+        except Exception:
+            pass
+
+def decompress_sav(data: bytes, path: str = "", debug_path: str = "") -> tuple:
     if len(data) < 12:
         _err(path, "Save file too short.", f"(size={len(data)}, need at least 12 bytes)")
     # Resolve header layout before validating magic. Bytes 8:11 can be b'CNK' (then magic at 20:23) or the actual magic (PlZ/PlM at 8:11).
@@ -199,6 +221,8 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         )
     if save_type not in (0x31, 0x32):
         _err(path, "Unhandled save type byte.", f"Layout={layout}. Expected 0x31 or 0x32, got 0x{save_type:02x}. First 32 bytes (hex): {data[:32].hex()}")
+    if compressed_len <= 0 or compressed_len > len(data):
+        _err(path, "Invalid compressed_len from header.", f"Layout={layout}. compressed_len={compressed_len} file_size={len(data)}. Header may be wrong layout.")
     # For 0x31 the payload is exactly compressed_len bytes; for 0x32 the rest of the file is the outer stream.
     if save_type == 0x31:
         if len(data) < start + compressed_len:
@@ -206,12 +230,26 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         payload = data[start:start + compressed_len]
     else:
         payload = data[start:]
+    header = data[:start]
+    _debug_log(debug_path, "decompress_sav:after_layout", "Layout and payload slice", {
+        "path": path, "layout": layout, "start": start, "save_type": save_type,
+        "compressed_len": compressed_len, "uncompressed_len": uncompressed_len,
+        "first_8_payload_hex": payload[:8].hex(), "is_level_sav": "Level.sav" in path
+    }, "H1")
+    if debug_path:
+        print("Header bytes (first 32):", data[:32].hex(), flush=True)
+        print("Layout:", layout, "Start:", start, "Compressed len:", compressed_len, "Save type:", hex(save_type), flush=True)
+        print("Payload first 4:", payload[:4].hex(), flush=True)
     try:
         if save_type == 0x31:
             raw = zlib.decompress(payload)
         else:
             raw = zlib.decompress(zlib.decompress(payload))
     except zlib.error as e:
+        _debug_log(debug_path, "decompress_sav:zlib_error", "Zlib decompress failed", {
+            "path": path, "layout": layout, "start": start,
+            "first_8_payload_hex": payload[:8].hex(), "error": str(e)
+        }, "H5")
         _err(
             path,
             "Zlib decompress failed; data may be corrupted or payload offset wrong.",
@@ -219,45 +257,50 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         )
     if len(raw) != uncompressed_len:
         _err(path, "Uncompressed length mismatch.", f"Expected {uncompressed_len}, got {len(raw)}")
-    return raw, save_type, magic
+    return raw, save_type, magic, header, layout
 
-def compress_sav(raw: bytes, save_type: int, magic: bytes) -> bytes:
+def compress_sav(raw: bytes, save_type: int, magic: bytes, header: bytes, layout: str) -> bytes:
     if len(magic) != 3:
-        raise SystemExit(f"compress_sav: magic must be 3 bytes, got {len(magic)}")
+        print(f"[ERROR] compress_sav: magic must be 3 bytes, got {len(magic)}", file=sys.stderr, flush=True)
+        sys.exit(1)
     inner = zlib.compress(raw)
     compressed_len = len(inner)
     if save_type == 0x32:
         compressed = zlib.compress(inner)
     else:
         compressed = inner
-    out = bytearray()
-    out.extend(len(raw).to_bytes(4, "little"))
-    out.extend(compressed_len.to_bytes(4, "little"))
-    out.extend(magic)
-    out.append(save_type)
+    out = bytearray(header)
+    if layout == "standard":
+        out[0:4] = len(raw).to_bytes(4, "little")
+        out[4:8] = compressed_len.to_bytes(4, "little")
+    else:
+        out[12:16] = len(raw).to_bytes(4, "little")
+        out[16:20] = compressed_len.to_bytes(4, "little")
     out.extend(compressed)
     return bytes(out)
 
-def patch_file(path: str, old_fmt: str, new_fmt: str) -> None:
+def patch_file(path: str, old_fmt: str, new_fmt: str, debug_path: str = "") -> None:
     old_b = old_fmt.encode("utf-8")
     new_b = new_fmt.encode("utf-8")
     if len(old_b) != len(new_b):
-        raise SystemExit(f"{path}: GUID length mismatch.")
+        _err(path, "GUID length mismatch.", "")
     with open(path, "rb") as f:
         data = f.read()
-    raw, save_type, magic = decompress_sav(data, path)
+    raw, save_type, magic, header, layout = decompress_sav(data, path, debug_path)
     if old_b not in raw:
-        raise SystemExit(f"{path}: GUID string {old_fmt!r} not found in decompressed data (save format may differ or file may be from another source).")
+        print(f"[ERROR] {path}: GUID string {old_fmt!r} not found in decompressed data (save format may differ or file may be from another source).", file=sys.stderr, flush=True)
+        sys.exit(1)
     raw = raw.replace(old_b, new_b)
-    out = compress_sav(raw, save_type, magic)
+    out = compress_sav(raw, save_type, magic, header, layout)
     with open(path, "wb") as f:
         f.write(out)
 
 def main():
     world_path, old_sav, new_sav, old_fmt, new_fmt = sys.argv[1:6]
+    debug_path = (sys.argv[6] if len(sys.argv) > 6 else "") or ""
     level_sav = world_path + "/Level.sav"
-    patch_file(level_sav, old_fmt, new_fmt)
-    patch_file(old_sav, old_fmt, new_fmt)
+    patch_file(level_sav, old_fmt, new_fmt, debug_path)
+    patch_file(old_sav, old_fmt, new_fmt, debug_path)
     import os
     os.remove(new_sav)
     os.rename(old_sav, new_sav)
