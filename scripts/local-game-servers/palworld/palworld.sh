@@ -53,6 +53,19 @@ echo "---------------------------------------------"
 echo "Starting Palworld dedicated server setup..."
 echo "---------------------------------------------"
 
+echo ""
+echo "*** WARNING ***"
+echo "This script will ERASE any existing Palworld server worlds and start over completely."
+echo "If you have an existing server at the chosen install path, all save data will be deleted."
+echo "*** WARNING ***"
+echo ""
+read -p "Continue? (will erase any existing server worlds and start over completely) [y/N]: " confirm_overwrite
+if [[ ! "${confirm_overwrite:-n}" =~ ^[Yy] ]]; then
+  echo "Aborted. No changes made."
+  exit 0
+fi
+echo ""
+
 #############################################
 # 2. Steam User Setup (Automatic)
 #############################################
@@ -105,6 +118,25 @@ echo "Creating installation directory: $INSTALL_DIR"
 sudo -u steam mkdir -p "$INSTALL_DIR"
 chown -R steam:steam "$INSTALL_DIR"
 echo "✓ Directory created and ownership set to steam:steam"
+
+# Overwrite existing worlds: stop service, remove save data and existing config so we start completely fresh
+if systemctl is-active --quiet palworld.service 2>/dev/null; then
+  echo "Stopping existing palworld service..."
+  systemctl stop palworld.service
+  echo "✓ Service stopped"
+fi
+SAVE_DIR="$INSTALL_DIR/Pal/Saved/SaveGames"
+CONFIG_DIR_OVERWRITE="$INSTALL_DIR/Pal/Saved/Config/LinuxServer"
+if [ -d "$SAVE_DIR" ]; then
+  echo "Removing existing world/save data (will start over completely)..."
+  rm -rf "$SAVE_DIR"
+  echo "✓ Existing save data removed"
+fi
+if [ -f "$CONFIG_DIR_OVERWRITE/PalWorldSettings.ini" ]; then
+  echo "Removing existing server config (will apply new settings)..."
+  rm -f "$CONFIG_DIR_OVERWRITE/PalWorldSettings.ini"
+  echo "✓ Existing config removed"
+fi
 
 #############################################
 # 4. System Package Installation

@@ -2,6 +2,19 @@
 
 Scripts to install, configure, and manage a Palworld dedicated server on Linux (SteamCMD + systemd + UFW), including world save import/export and interactive server configuration. Scripts target **Palworld server 0.7.1**; parameters may change in future game versions.
 
+---
+
+## ⚠ Overwrite warning
+
+**Running any of the creation/install scripts (`palworld.sh`, `palworld-normal.sh`, `palworld-casual.sh`, `palworld-hard.sh`, `palworld-hardcore.sh`, `palworld-custom.sh`) will overwrite existing server state.** The script will:
+
+- **Erase any existing server worlds and save data** at the chosen install path (e.g. `/home/steam/palserver`).
+- **Replace server configuration** with the new run’s settings (preset or wizard).
+
+The script asks for confirmation before proceeding: **Continue? (will erase any existing server worlds and start over completely) [y/N]** — you must answer **y** to continue. Use these scripts on a clean machine for a new server, or when you intentionally want to wipe and recreate the server at that path. Back up any worlds you want to keep (e.g. with `export-palworld-save.sh`) before running an install script.
+
+---
+
 ## Choose your path
 
 | Path | When to use | What you do |
@@ -15,7 +28,7 @@ See the [main README](../README.md) for prerequisites and troubleshooting.
 
 ## Path A: New server
 
-**Summary:** Create a new dedicated server. No world import or host fix.
+**Summary:** Create a new dedicated server. No world import or host fix. **Running any install script will overwrite existing worlds and config at the chosen path** (see [Overwrite warning](#-overwrite-warning)).
 
 1. **Create the server** — On the game host (SSH or Proxmox console), download and run **one** of the install scripts. Each creates the server under `/home/steam/palserver` (or your choice) and sets up systemd + UFW.
 
@@ -272,7 +285,7 @@ If you imported a **single-player or co-op** world, the host’s character is st
 
 **Troubleshooting:**
 
-- **“Payload at layout start is not zlib” / “no valid zlib stream found”:** The save may be from a different game version or use another format (e.g. payload at byte 12 is not standard zlib). If the script cannot find a valid zlib stream, use the upstream tool: `pip install palworld-save-tools` and [fix_host_save.py](https://github.com/xNul/palworld-host-save-fix) (requires Python and the palworld-save-tools dependency).
+- **“Payload at layout start is not zlib” / “no valid zlib stream found”:** The save file cannot be converted or salvaged if the game build uses Oodle compression. Oodle is a proprietary format that cannot be decompressed or patched with open-source tools, and there is no workaround available for such saves. If you see this error, the save is effectively unusable on dedicated servers unless Palworld provides native support.
 - **Guild / Pals:** After the fix, if the host’s Pals do not work at the base, have the host drop and pick up each Pal (Party → Drop, then pick up) to re-register them. For full dedicated-server migrations where every player got a new GUID, see the upstream [palworld-host-save-fix](https://github.com/xNul/palworld-host-save-fix) notes on guild workarounds.
 - **Left-click / attack bug:** Some players need to leave the guild and rejoin once to fix attack input.
 - **Viewing Cage:** Not supported on dedicated servers; remove it from the co-op save before importing.
