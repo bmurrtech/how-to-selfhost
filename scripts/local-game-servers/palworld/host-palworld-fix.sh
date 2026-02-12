@@ -199,14 +199,24 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         )
     if save_type not in (0x31, 0x32):
         _err(path, "Unhandled save type byte.", f"Layout={layout}. Expected 0x31 or 0x32, got 0x{save_type:02x}. First 32 bytes (hex): {data[:32].hex()}")
-    payload = data[start:]
+    # For 0x31 the payload is exactly compressed_len bytes; for 0x32 the rest of the file is the outer stream.
+    if save_type == 0x31:
+        if len(data) < start + compressed_len:
+            _err(path, "File too short for payload.", f"Layout={layout}. Need start+compressed_len={start + compressed_len}, have {len(data)}.")
+        payload = data[start:start + compressed_len]
+    else:
+        payload = data[start:]
     try:
         if save_type == 0x31:
             raw = zlib.decompress(payload)
         else:
             raw = zlib.decompress(zlib.decompress(payload))
     except zlib.error as e:
-        _err(path, "Zlib decompress failed; data may be corrupted.", f"Layout={layout}. {e}")
+        _err(
+            path,
+            "Zlib decompress failed; data may be corrupted or payload offset wrong.",
+            f"Layout={layout}. {e}. uncompressed_len={uncompressed_len} compressed_len={compressed_len} start={start}. First 8 payload bytes (hex): {payload[:8].hex()} (valid zlib often starts 78 9c or 78 da)."
+        )
     if len(raw) != uncompressed_len:
         _err(path, "Uncompressed length mismatch.", f"Expected {uncompressed_len}, got {len(raw)}")
     return raw, save_type, magic
