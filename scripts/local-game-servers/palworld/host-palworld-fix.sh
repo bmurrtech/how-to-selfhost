@@ -285,8 +285,8 @@ def decompress_sav(data: bytes, path: str = "", debug_path: str = "") -> tuple:
         else:
             _err(
                 path,
-                "Payload at layout start is not zlib and no valid zlib stream found.",
-                f"Layout={layout} start={start}. Searched first {MAX_ZLIB_SEARCH} bytes. First 8 payload bytes: {payload[:8].hex()} (valid zlib: 78 9c / 78 da / 78 01). This save may use a different format (e.g. another game version). Try: pip install palworld-save-tools and the fix_host_save.py from https://github.com/xNul/palworld-host-save-fix"
+                "Fix not possible: Unreal Oodle proprietary compression detected on this save.",
+                "Only recourse is to start a new character on the dedicated server."
             )
     _debug_log(debug_path, "decompress_sav:after_layout", "Layout and payload slice", {
         "path": path, "layout": layout, "start": start, "save_type": save_type,
