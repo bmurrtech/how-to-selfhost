@@ -159,9 +159,15 @@ import zlib
 
 MAGIC = b"PlZ"
 
-def decompress_sav(data: bytes):
+def _err(path: str, msg: str, detail: str = "") -> None:
+    out = f"{path}: {msg}"
+    if detail:
+        out += f" {detail}"
+    raise SystemExit(out)
+
+def decompress_sav(data: bytes, path: str = "") -> tuple:
     if len(data) < 12:
-        raise SystemExit("Save file too short")
+        _err(path, "Save file too short.", f"(size={len(data)}, need at least 12 bytes)")
     uncompressed_len = int.from_bytes(data[0:4], "little")
     compressed_len = int.from_bytes(data[4:8], "little")
     magic = data[8:11]
@@ -169,23 +175,32 @@ def decompress_sav(data: bytes):
     start = 12
     if magic == b"CNK":
         if len(data) < 24:
-            raise SystemExit("Save file too short (CNK)")
+            _err(path, "Save file too short for CNK header.", f"(size={len(data)}, need 24)")
         uncompressed_len = int.from_bytes(data[12:16], "little")
         compressed_len = int.from_bytes(data[16:20], "little")
         magic = data[20:23]
         save_type = data[23]
         start = 24
+    if magic == b"\x00\x00\x00" and uncompressed_len == 0 and compressed_len == 0:
+        _err(path, "Header is all nulls; file may be empty or corrupted.", "(not a compressed Palworld save)")
     if magic != MAGIC:
-        raise SystemExit("Not a Palworld compressed save (bad magic)")
+        _err(
+            path,
+            "Invalid save header: expected PlZ magic (0x506c5a at bytes 8:11).",
+            f"Got bytes 8:11 = {magic!r} (hex: {magic.hex()}); file size = {len(data)}. File may be corrupted or from an unsupported format."
+        )
     if save_type not in (0x31, 0x32):
-        raise SystemExit("Unhandled save type")
+        _err(path, "Unhandled save type byte.", f"Expected 0x31 or 0x32, got 0x{save_type:02x}")
     payload = data[start:]
-    if save_type == 0x31:
-        raw = zlib.decompress(payload)
-    else:
-        raw = zlib.decompress(zlib.decompress(payload))
+    try:
+        if save_type == 0x31:
+            raw = zlib.decompress(payload)
+        else:
+            raw = zlib.decompress(zlib.decompress(payload))
+    except zlib.error as e:
+        _err(path, "Zlib decompress failed; data may be corrupted.", str(e))
     if len(raw) != uncompressed_len:
-        raise SystemExit("Uncompressed length mismatch")
+        _err(path, "Uncompressed length mismatch.", f"Expected {uncompressed_len}, got {len(raw)}")
     return raw, save_type
 
 def compress_sav(raw: bytes, save_type: int) -> bytes:
@@ -207,12 +222,12 @@ def patch_file(path: str, old_fmt: str, new_fmt: str) -> None:
     old_b = old_fmt.encode("utf-8")
     new_b = new_fmt.encode("utf-8")
     if len(old_b) != len(new_b):
-        raise SystemExit("GUID length mismatch")
+        raise SystemExit(f"{path}: GUID length mismatch.")
     with open(path, "rb") as f:
         data = f.read()
-    raw, save_type = decompress_sav(data)
+    raw, save_type = decompress_sav(data, path)
     if old_b not in raw:
-        raise SystemExit(f"GUID string not found in {path} (format may differ)")
+        raise SystemExit(f"{path}: GUID string {old_fmt!r} not found in decompressed data (save format may differ or file may be from another source).")
     raw = raw.replace(old_b, new_b)
     out = compress_sav(raw, save_type)
     with open(path, "wb") as f:
