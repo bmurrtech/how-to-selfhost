@@ -157,8 +157,8 @@ python3 - "$WORLD_PATH" "$OLD_SAV" "$NEW_SAV" "$OLD_FMT" "$NEW_FMT" <<'PYTHON_SC
 import sys
 import zlib
 
-# Level.sav uses b'PLM' (0x50 0x4C 0x4D); player saves use b'PlZ' (0x50 0x6c 0x5a). Match full 3-byte sequence.
-VALID_MAGICS = {b"PlZ", b"PLM"}
+# Level.sav uses b'PlM' (0x50 0x6c 0x4d); player saves use b'PlZ' (0x50 0x6c 0x5a). Match full 3-byte sequence.
+VALID_MAGICS = {b"PlZ", b"PlM"}
 
 def _err(path: str, msg: str, detail: str = "") -> None:
     out = f"{path}: {msg}"
@@ -169,12 +169,10 @@ def _err(path: str, msg: str, detail: str = "") -> None:
 def decompress_sav(data: bytes, path: str = "") -> tuple:
     if len(data) < 12:
         _err(path, "Save file too short.", f"(size={len(data)}, need at least 12 bytes)")
-    uncompressed_len = int.from_bytes(data[0:4], "little")
-    compressed_len = int.from_bytes(data[4:8], "little")
-    magic = data[8:11]
-    save_type = data[11]
-    start = 12
-    if magic == b"CNK":
+    # Resolve header layout before validating magic. Bytes 8:11 can be b'CNK' (then magic at 20:23) or the actual magic (PlZ/PlM at 8:11).
+    bytes_8_11 = data[8:11]
+    if bytes_8_11 == b"CNK":
+        layout = "CNK"
         if len(data) < 24:
             _err(path, "Save file too short for CNK header.", f"(size={len(data)}, need 24)")
         uncompressed_len = int.from_bytes(data[12:16], "little")
@@ -182,16 +180,25 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         magic = data[20:23]
         save_type = data[23]
         start = 24
+        magic_offset = "20:23"
+    else:
+        layout = "standard"
+        uncompressed_len = int.from_bytes(data[0:4], "little")
+        compressed_len = int.from_bytes(data[4:8], "little")
+        magic = bytes_8_11
+        save_type = data[11]
+        start = 12
+        magic_offset = "8:11"
     if magic == b"\x00\x00\x00" and uncompressed_len == 0 and compressed_len == 0:
         _err(path, "Header is all nulls; file may be empty or corrupted.", "(not a compressed Palworld save)")
     if magic not in VALID_MAGICS:
         _err(
             path,
-            "Unsupported magic at bytes 8:11.",
-            f"Got {magic!r} (hex: {magic.hex()}); expected one of {VALID_MAGICS}. file size = {len(data)}."
+            "Unsupported magic.",
+            f"Layout={layout}, validated magic at offset {magic_offset} = {magic!r} (hex: {magic.hex()}); expected one of {VALID_MAGICS}. file size = {len(data)}. First 32 bytes (hex): {data[:32].hex()}"
         )
     if save_type not in (0x31, 0x32):
-        _err(path, "Unhandled save type byte.", f"Expected 0x31 or 0x32, got 0x{save_type:02x}")
+        _err(path, "Unhandled save type byte.", f"Layout={layout}. Expected 0x31 or 0x32, got 0x{save_type:02x}. First 32 bytes (hex): {data[:32].hex()}")
     payload = data[start:]
     try:
         if save_type == 0x31:
@@ -199,7 +206,7 @@ def decompress_sav(data: bytes, path: str = "") -> tuple:
         else:
             raw = zlib.decompress(zlib.decompress(payload))
     except zlib.error as e:
-        _err(path, "Zlib decompress failed; data may be corrupted.", str(e))
+        _err(path, "Zlib decompress failed; data may be corrupted.", f"Layout={layout}. {e}")
     if len(raw) != uncompressed_len:
         _err(path, "Uncompressed length mismatch.", f"Expected {uncompressed_len}, got {len(raw)}")
     return raw, save_type, magic
