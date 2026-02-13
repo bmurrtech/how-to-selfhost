@@ -11,7 +11,10 @@ For **scripted game server installs** (Satisfactory, Palworld) with SteamCMD, UF
 | WIP | [ULTIMATE Proxmox Hypervisor](how-to_ultimate_proxmox.md) | ZFS, cloud-init, Cloudflare remote access, Portainer, Plex, K3s, Ansible |
 | WIP | [Remotely Access Your Servers via Cloudflare](how-to_cloudflare.md) | Tunnels, SASE/Zero-trust, MFA, Authelia |
 | WIP | [PfSense NG-FW Configuration with VLANS](how-to_pfsense.md) | VLANs, firewall, HAProxy |
-| WIP | [ULITMATE Self-Hosted Gamer Server](how-to_game_servers.md) | Pterodactyl, Satisfactory, ARK, Minecraft/FTB/Crafty; CLI scripts in [scripts/local-game-servers](../scripts/local-game-servers/) |
+| WIP | [Game Servers Hub](how-to_game_servers.md) | Overview of self-hosted vs paid options; quick path to SteamCMD, Pterodactyl, Minecraft guides |
+| WIP | [How-to SteamCMD](how-to_steamCMD.md) | SteamCMD principles; Satisfactory, Palworld, ARK; preferred scripts in [local-game-servers](../scripts/local-game-servers/) |
+| WIP | [How-to Pterodactyl](how-to_pterodactyl.md) | Multi-game server panel; automated and manual Docker install |
+| WIP | [How-to Minecraft Multi-Server](how-to_minecraft_multi_server.md) | Crafty web UI, FTB, modded servers, whitelist, commands |
 | WIP | [Self-hosted, Security-hardened Ghost Blog Site](how-to_ghost_blog.md) | Security-hardened Ghost via Docker/Portainer, DNS, firewall |
 | WIP | [All Things AI](how-to_AI.md) | Ollama, Conda, PyTorch, CUDA, dev environment |
 | WIP | [How-to Create a Flux Node on Proxmox](how-to_flux_proxmox_node.md) | Flux node setup (short; links to pfSense) |

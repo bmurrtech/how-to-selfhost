@@ -1,4 +1,3 @@
-License: MIT (see [LICENSE.md](LICENSE.md)).
 
 # Acknowledgements
 - Ben Heater's OG pfSense VLAN guide was immensley helpful. Go check out [Ben's other great guides](https://benheater.com/) no his website! 

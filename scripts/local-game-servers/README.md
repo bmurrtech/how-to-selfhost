@@ -128,32 +128,6 @@ sudo ufw status verbose | grep -E 'Status|8211|27015|7777|15000'
 | Version mismatch | Update game client and server to match |
 | Wrong port | Palworld: `IP:8211`. Satisfactory: `IP:7777` (or configured port) |
 
-## Alternative Management Platforms
+## Alternative platforms and remote access
 
-For users looking to host outside their network or seeking more comprehensive management UIs beyond basic SteamCMD automation, several platforms provide enhanced server management with web interfaces, security features, and remote access capabilities.
-
-### Server Management Platforms
-
-| Platform | Hosting Style Focus | Security/HTTPS Onboarding | Licensing for Self-Hosters | Key Strengths |
-|----------|-------------------|-------------------------|---------------------------|---------------|
-| **AMP** | Self-host + professional hosts | Guided nginx + Let's Encrypt; internal HTTPS options | One-time lifetime license available | Best-in-class for "done-for-you" security, multi-game support, web UI with templates, lifecycle controls, permissions, and centralized access |
-| **Multicraft** | Traditional game hosts | Depends on host's own web setup | Often hoster-driven, less "buy once" | Established panel for game hosting providers |
-| **Pterodactyl** | Dev/ops & Docker-savvy users | Docker + reverse proxy you design/configure | Open-source, but you own all integration work | Modern, Docker-based with strong community support |
-| **TCAdmin** | Enterprise / commercial hosts | Strong features; more complex to configure | Commercial, tuned for large hosting providers | Deep enterprise-style control and management |
-| **Pelican** | Modern fork for hosts | Similar model to Pterodactyl, host-managed | Free/community, with hoster focus | Lightweight, community-driven alternative |
-
-**Why choose AMP over SteamCMD?**
-- AMP wraps SteamCMD workloads in a managed environment with web UI, templates, and lifecycle controls
-- Provides consistent workflows for multiple games instead of one-off scripts
-- Includes built-in security features like HTTPS setup, firewall guidance, and non-root operation
-- Lifetime licensing appeals to long-term hobbyists and small communities
-
-### Remote Connection Options
-
-For hosting outside your local network, these tools enable secure remote access without exposing ports directly to the internet.
-
-| Tool | Type | Cost | Key Features | Best For |
-|------|------|------|--------------|----------|
-| **WireGuard** | Self-hosted VPN | Free | Point-to-point encrypted tunnels, custom routing, high performance | Technical users wanting full control over network topology |
-| **playit.gg** | Gaming tunnel service | Free tier available? | Automatic port forwarding, game-optimized routing, zero-config setup | Gamers wanting simple remote access without network configuration |
-| **Tailscale** | Mesh VPN | Free up to 3 users | Zero-config mesh networking, NAT traversal, integrated with existing infrastructure | Teams and families needing secure remote access with minimal setup |
+For management UIs beyond SteamCMD (AMP, Pterodactyl, Multicraft, etc.) and remote connection options (WireGuard, Tailscale, playit.gg), see the [Game Servers Hub](../../guides/how-to_game_servers.md#alternative-management-platforms) guide.

@@ -4,17 +4,17 @@
 
 ## Top Guides
 
-|  | Status | Guide | One-line |
+|  | Status | Guide | About |
 |---|--------|--------|----------|
 | 🏠 | WIP | [ULTIMATE Proxmox Hypervisor](guides/how-to_ultimate_proxmox.md) | ZFS, cloud-init, Portainer, Plex, K3s, Ansible |
-| 🎮 | WIP | [ULITMATE Self-Hosted Gamer Server](guides/how-to_game_servers.md) | Pterodactyl, Satisfactory, Palworld, ARK, Minecraft; [scripts](scripts/local-game-servers/README.md) |
+| 🎮 | WIP | [ULTIMATE Self-Hosted Game Servers Hub](guides/how-to_game_servers.md) | [SteamCMD](guides/how-to_steamCMD.md), [Pterodactyl](guides/how-to_pterodactyl.md), [Minecraft/Crafty](guides/how-to_minecraft_multi_server.md); [scripts](scripts/local-game-servers/README.md) |
 | 📝 | WIP | [Ghost Blog (security-hardened)](guides/how-to_ghost_blog.md) | Docker/Portainer, DNS, firewall |
 | 🔒 | WIP | [Remotely Access via Cloudflare](guides/how-to_cloudflare.md) | Tunnels, SASE/Zero-trust, MFA, Authelia |
 | 🔥 | WIP | [PfSense NG-FW + VLANs](guides/how-to_pfsense.md) | VLANs, firewall, HAProxy |
 | 📦 | Incomplete | [S3 / MinIO Object Storage](guides/how-to_s3-minio.md) | Self-hosted S3, rclone, game save backups |
 | ⛏️ | WIP | [Flux Node on Proxmox](guides/how-to_flux_proxmox_node.md) | Flux node (links to pfSense) |
 | 🪙 | WIP | [Neoxa Mining VM](guides/how-to_neoxa_node.md) | Neoxa wallet, mining node |
-| ☁️ | Incomplete | [Google Cloud VM](guides/how-to-google-cloud-vm.md) | GCP free tier (partial) |
+| ☁️ | WIP | [Google Cloud VM](guides/how-to-google-cloud-vm.md) | GCP free tier (partial) |
 
 **Status key**: **WIP** = in progress, substantive; **Incomplete** = skeleton or unfinished; **Other** = reference/meta.
 
