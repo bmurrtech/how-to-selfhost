@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # f2b-install.sh — lightweight Fail2ban with CLI whitelist flags
+# Idempotent: re-run rewrites configs and restarts fail2ban so ignoreip/jail changes apply.
 # Usage examples:
 #   sudo ./f2b-install.sh --whitelist "203.0.113.7,198.51.100.10/32"
 #   sudo ./f2b-install.sh --whitelist 203.0.113.7 --whitelist 198.51.100.10/32
@@ -216,7 +217,9 @@ logpath = /var/log/nginx/access.log
 maxretry = 2
 EOF
 
-systemctl enable --now fail2ban
+systemctl enable fail2ban
+# --now does not restart an already-running service; restart applies whitelist/config on reruns
+systemctl restart fail2ban
 sleep 1
 fail2ban-client status || true
 

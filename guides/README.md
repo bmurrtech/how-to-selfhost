@@ -16,17 +16,17 @@ For **scripted game server installs** (Satisfactory, Palworld) with SteamCMD, UF
 | WIP | [How-to Pterodactyl](how-to_pterodactyl.md) | Multi-game server panel; automated and manual Docker install |
 | WIP | [How-to Minecraft Multi-Server](how-to_minecraft_multi_server.md) | Crafty web UI, FTB, modded servers, whitelist, commands |
 | WIP | [Self-hosted, Security-hardened Ghost Blog Site](how-to_ghost_blog.md) | Security-hardened Ghost via Docker/Portainer, DNS, firewall |
-| WIP | [All Things AI](how-to_AI.md) | Ollama, Conda, PyTorch, CUDA, dev environment |
+| Incomplete | [All Things AI](how-to_AI.md) | Ollama, Conda, PyTorch, CUDA, dev environment |
 | WIP | [How-to Create a Flux Node on Proxmox](how-to_flux_proxmox_node.md) | Flux node setup (short; links to pfSense) |
-| WIP | [How-to Setup Kemp Load-balancer](how-to_kemp_loadmaster.md) | Enterprise load balancer on Proxmox (OVF/SCP) |
-| WIP | [How-to Make a 24-7 Youtube Livestream](how-to_24-7_livestream.md) | RSS/RTSP, TICKR, Ant Media Server, OBS (WIP, untested) |
-| WIP | [Focalboard](how-to_focalboard.md) | Focalboard + Certbot, Docker Compose |
+| Incomplete | [How-to Setup Kemp Load-balancer](how-to_kemp_loadmaster.md) | Enterprise load balancer on Proxmox (OVF/SCP) |
+| Incomplete | [How-to Make a 24-7 Youtube Livestream](how-to_24-7_livestream.md) | RSS/RTSP, TICKR, Ant Media Server, OBS (WIP, untested) |
+| Incomplete | [Focalboard](how-to_focalboard.md) | Focalboard + Certbot, Docker Compose |
 | WIP | [Certbot](how-to_certbot.md) | Let's Encrypt, webroot vs standalone, Docker |
 | WIP | [Neoxa Mining VM](how-to_neoxa_node.md) | Neoxa wallet, mining node setup |
 | WIP | [Jupyter Lab](how-to-jupyter-lab.md) | JupyterLab setup (references cloud-init) |
 | WIP | [S3 / MinIO Object Storage](how-to_s3-minio.md) | Self-hosted S3-compatible storage, rclone, game save backups |
 | Incomplete | [Email Server](how-to-email-server.md) | Mailcow/VPS email (draft; reverse DNS / static IP requirements) |
-| Incomplete | [Google Cloud VM](how-to-google-cloud-vm.md) | GCP free tier VM (partial; more guides planned) |
+| WIP | [Google Cloud VM](how-to-google-cloud-vm.md) | GCP free tier VM (partial; more guides planned) |
 | Other | [My Homelab Projects](my_homelab_projects.md) | Checklist / reference of homelab goals and links |
 
 **Status key**
