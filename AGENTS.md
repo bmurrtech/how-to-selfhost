@@ -40,7 +40,7 @@ Rules:
 
 ## Repo layout (scripts only)
 
-- `scripts/security/` — f2b-install.sh, new-sudo-user.sh, secops.sh
+- `scripts/security/` — f2b-install.sh, new-sudo-user.sh, vps-sec-harden.sh
 - `scripts/local-game-servers/` — satisfactory.sh, palworld.sh
 - `scripts/wireguard/` — wg-selhost.sh, wg-cloud-init.yaml
 - `scripts/github/` — gh-wsl2-auth-setup.sh

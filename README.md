@@ -27,7 +27,7 @@ Full glossary and cross-references: **[guides/README.md](guides/README.md)**.
 |  | Folder | What’s inside | README |
 |---|--------|----------------|--------|
 | 🎮 | [local-game-servers](scripts/local-game-servers/README.md) | SteamCMD, UFW, systemd, save import/export | [README](scripts/local-game-servers/README.md) |
-| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (secops) | [README](scripts/security/README.md) |
+| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (`vps-sec-harden.sh`) | [README](scripts/security/README.md) |
 | 🎯 | [wireguard](scripts/wireguard/README.md) | WireGuard VPN — standalone script + cloud-init | [README](scripts/wireguard/README.md) |
 | 🔑 | [github](scripts/github/README.md) | Git/GitHub auth — WSL2 + `gh` OAuth in Windows browser | [README](scripts/github/README.md) |
 

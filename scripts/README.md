@@ -6,7 +6,7 @@ Scripts and configs used by the how-to guides. Organized by purpose.
 
 | Folder | Purpose |
 |--------|---------|
-| [security/](security/) | Fail2ban, new sudo user, SSH/system hardening (secops). For home LAN or VPS; see README for lockout safety. |
+| [security/](security/) | Fail2ban, new sudo user, SSH/system hardening (`vps-sec-harden.sh`). For home LAN or VPS; see README for lockout safety. |
 | [local-game-servers/](local-game-servers/) | SteamCMD-based game servers: Satisfactory, Palworld. UFW + systemd, tuned for local home or VPS. |
 | [wireguard/](wireguard/) | WireGuard VPN server: standalone script and cloud-init user-data. |
 | [github/](github/) | Git/GitHub auth: WSL2 + `gh` browser setup so OAuth opens in Windows default browser. |

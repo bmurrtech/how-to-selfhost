@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# vps-sec-harden.sh — VPS SSH and system baseline hardening (formerly secops.sh in this repo).
 # Idempotent: safe to re-run; skips duplicate sysctl/fstab/sshd template lines and
 # avoids duplicate UFW rules where detectable. Unattended-upgrades reconfigure runs once.
 

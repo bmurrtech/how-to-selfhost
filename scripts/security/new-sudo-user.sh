@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Idempotent: re-run skips useradd/password when the user exists, preserves
-# authorized_keys unless missing (then seeds from /root), and de-dupes appended keys.
+# Idempotent: re-run skips useradd/password when the user exists, preserves non-empty
+# authorized_keys, and de-dupes pasted public key lines. Never reads or writes
+# /root/.ssh (provider break-glass keys stay untouched).
 
 # Ensure the script is being run with sudo privileges
 if [[ $EUID -ne 0 ]]; then
@@ -117,49 +118,45 @@ fi
 chage -I -1 -m 0 -M 99999 -E -1 "$NEW_USER"
 log_action "Password expiration disabled for $NEW_USER."
 
-# Copy root's authorized_keys (when run as root) and optionally append a vault-managed public key
+# authorized_keys: only from operator-pasted PUBLIC lines; never from /root/.ssh.
 echo "Setting up SSH authorized_keys for $NEW_USER..."
+echo "Log in as $NEW_USER with the private key matching what you paste (e.g. ssh -i ~/.ssh/your_key $NEW_USER@this-host). /root/.ssh is not modified."
 mkdir -p "/home/$NEW_USER/.ssh"
 AUTH_KEYS="/home/$NEW_USER/.ssh/authorized_keys"
 
-if [[ "$USER_ALREADY_EXISTS" -eq 1 && -f $AUTH_KEYS ]]; then
-    echo "Keeping existing $AUTH_KEYS (idempotent rerun)."
+if [[ -f "$AUTH_KEYS" && -s "$AUTH_KEYS" && "$USER_ALREADY_EXISTS" -eq 1 ]]; then
+    echo "Keeping existing $AUTH_KEYS (idempotent rerun). You may add more keys below."
     log_action "Preserved existing authorized_keys for $NEW_USER."
-elif [[ -f /root/.ssh/authorized_keys ]]; then
-    cp /root/.ssh/authorized_keys "$AUTH_KEYS"
+elif [[ ! -f "$AUTH_KEYS" ]]; then
+    : >"$AUTH_KEYS"
+    chmod 600 "$AUTH_KEYS"
     chown "$NEW_USER:$NEW_USER" "$AUTH_KEYS"
-    chmod 600 "$AUTH_KEYS"
-    log_action "SSH keys copied from root to $NEW_USER."
+    log_action "Created empty authorized_keys for $NEW_USER."
 else
-    echo "No /root/.ssh/authorized_keys found; keys must be added manually or below."
-    log_action "No root authorized_keys; skipped copy for $NEW_USER."
-    if [[ ! -f $AUTH_KEYS ]]; then
-        : >"$AUTH_KEYS"
-        chmod 600 "$AUTH_KEYS"
-        chown "$NEW_USER:$NEW_USER" "$AUTH_KEYS"
-    fi
+    chmod 600 "$AUTH_KEYS"
+    chown "$NEW_USER:$NEW_USER" "$AUTH_KEYS"
 fi
 
-echo "Optional: paste ONE line (public key only, e.g. from Bitwarden) for $NEW_USER, or leave empty:"
-read -r EXTRA_PUBKEY
-if [[ -n "${EXTRA_PUBKEY// }" ]]; then
-    if [[ -f $AUTH_KEYS ]] && grep -qFx "$EXTRA_PUBKEY" "$AUTH_KEYS"; then
-        echo "That public key line is already in authorized_keys; skipping append."
-        log_action "Skipped duplicate public key line for $NEW_USER."
+echo "Paste PUBLIC key line(s) for $NEW_USER only (e.g. from Bitwarden). One key per line; press ENTER on an empty line when done:"
+while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "${line// }" ]] && break
+    if grep -qFx "$line" "$AUTH_KEYS" 2>/dev/null; then
+        echo "(Skipped: line already in authorized_keys.)"
+        log_action "Skipped duplicate pasted public key line for $NEW_USER."
     else
-        printf '%s\n' "$EXTRA_PUBKEY" >>"$AUTH_KEYS"
-        log_action "Appended user-supplied public key line for $NEW_USER."
+        printf '%s\n' "$line" >>"$AUTH_KEYS"
+        log_action "Appended pasted public key line for $NEW_USER."
     fi
+done
+
+if [[ ! -s "$AUTH_KEYS" ]]; then
+    echo "Warning: authorized_keys is still empty. Add a key before switching to key-only SSH (e.g. vps-sec-harden.sh), or use password login until then."
+    log_action "authorized_keys empty after paste step for $NEW_USER."
 fi
 
-if [[ -f $AUTH_KEYS ]]; then
-    chown -R "$NEW_USER:$NEW_USER" "/home/$NEW_USER/.ssh"
-    chmod 700 "/home/$NEW_USER/.ssh"
-    chmod 600 "$AUTH_KEYS"
-else
-    echo "Warning: no authorized_keys file for $NEW_USER. Add keys before relying on SSH."
-    log_action "No authorized_keys file after setup for $NEW_USER."
-fi
+chown -R "$NEW_USER:$NEW_USER" "/home/$NEW_USER/.ssh"
+chmod 700 "/home/$NEW_USER/.ssh"
+chmod 600 "$AUTH_KEYS"
 
 read -rp "Restrict sshd with AllowUsers for an existing admin + $NEW_USER? (y/N): " RESTRICT_USERS
 if [[ "${RESTRICT_USERS,,}" == "y" ]]; then
@@ -180,7 +177,7 @@ if [[ "${RESTRICT_USERS,,}" == "y" ]]; then
         log_action "sshd_config AllowUsers set to $ADMIN_USER $NEW_USER (idempotent replace)."
     fi
 else
-    echo "Not changing AllowUsers (matches secops.sh default: no enforced user list)."
+    echo "Not changing AllowUsers (matches vps-sec-harden.sh default: no enforced user list)."
     log_action "AllowUsers not modified (operator chose no restriction)."
 fi
 
@@ -211,3 +208,4 @@ else
 fi
 
 echo "User $NEW_USER created and configured successfully. Actions logged to $LOG_FILE."
+echo "Next: from your workstation, verify login (new terminal): ssh -i /path/to/private_key $NEW_USER@<this-host>"
