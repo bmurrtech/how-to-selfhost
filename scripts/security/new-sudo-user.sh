@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Idempotent: re-run skips useradd/password when the user exists, preserves non-empty
-# authorized_keys, and de-dupes pasted public key lines. Never reads or writes
-# /root/.ssh (provider break-glass keys stay untouched).
+# Idempotent: re-run skips useradd/password when the user exists (unless you choose
+# overwrite: backup /home/USER, userdel, recreate, restore). Preserves non-empty
+# authorized_keys on normal reruns; de-dupes pasted public key lines. Never reads
+# or writes /root/.ssh (provider break-glass keys stay untouched).
 
 # Ensure the script is being run with sudo privileges
 if [[ $EUID -ne 0 ]]; then
@@ -52,10 +53,101 @@ function prompt_input {
 prompt_input NEW_USER "Enter the username for the new user"
 
 USER_ALREADY_EXISTS=0
+RECREATED_FROM_BACKUP=0
+OVERWRITE_FRESH=0
+HOME_BAK_ROOT=""
+HOME_BACKUP_COPY=""
+PASSWD_HOME=""
+STANDARD_HOME="/home/$NEW_USER"
+
 if id "$NEW_USER" &>/dev/null; then
     USER_ALREADY_EXISTS=1
-    echo "User $NEW_USER already exists; skipping account creation and password change (idempotent rerun)."
-    log_action "Idempotent rerun: user $NEW_USER already exists."
+    PASSWD_HOME=$(getent passwd "$NEW_USER" | cut -d: -f6)
+    HOME_MATCH=0
+    if [[ -n "$PASSWD_HOME" && -d "$PASSWD_HOME" ]]; then
+        CANON_PH=$(readlink -f "$PASSWD_HOME" 2>/dev/null || echo "$PASSWD_HOME")
+        CANON_STD=$(readlink -f "$STANDARD_HOME" 2>/dev/null || echo "$STANDARD_HOME")
+        if [[ "$CANON_PH" == "$CANON_STD" ]]; then
+            HOME_MATCH=1
+        fi
+    fi
+
+    if [[ "$HOME_MATCH" -eq 1 ]]; then
+        echo "Account '$NEW_USER' exists; home in passwd is $PASSWD_HOME (matches $STANDARD_HOME)."
+        echo "  [1] Backup home, remove account, recreate user, restore files from backup"
+        echo "  [2] Overwrite as new — remove account and home with no backup (destructive)"
+        echo "  [3] Keep account — only sudo / SSH keys / AllowUsers (default)"
+        read -rp "Choose 1, 2, or 3 [3]: " EXISTING_CHOICE
+        EXISTING_CHOICE="${EXISTING_CHOICE:-3}"
+        case "$EXISTING_CHOICE" in
+            1)
+                OVERWRITE_OK=0
+                if ! HOME_BAK_ROOT="$(mktemp -d /tmp/new-sudo-user.XXXXXX)"; then
+                    echo "Could not create temp dir for backup; keeping account unchanged."
+                    log_action "Backup+restore aborted: mktemp failed"
+                else
+                    HOME_BACKUP_COPY="$HOME_BAK_ROOT/${NEW_USER}.home.bak"
+                    echo "Backing up $PASSWD_HOME to $HOME_BACKUP_COPY ..."
+                    if cp -a "$PASSWD_HOME" "$HOME_BACKUP_COPY"; then
+                        OVERWRITE_OK=1
+                        log_action "Home backup created at $HOME_BACKUP_COPY"
+                    else
+                        echo "Backup (cp -a) failed; keeping account unchanged."
+                        log_action "Backup+restore aborted: cp failed"
+                        rm -rf "$HOME_BAK_ROOT"
+                        HOME_BAK_ROOT=""
+                        HOME_BACKUP_COPY=""
+                    fi
+                fi
+                if [[ "$OVERWRITE_OK" -eq 1 ]]; then
+                    if ! userdel "$NEW_USER"; then
+                        echo "userdel failed; account unchanged. Backup: ${HOME_BACKUP_COPY:-none}"
+                        log_action "Backup+restore aborted: userdel failed"
+                        exit 1
+                    fi
+                    log_action "userdel $NEW_USER succeeded (backup+restore path)"
+                    if [[ -d "$PASSWD_HOME" ]]; then
+                        if ! rm -rf "$PASSWD_HOME"; then
+                            echo "Failed to remove $PASSWD_HOME; restore from: $HOME_BACKUP_COPY"
+                            log_action "rm home failed after userdel"
+                            exit 1
+                        fi
+                        log_action "Removed $PASSWD_HOME prior to useradd"
+                    fi
+                    USER_ALREADY_EXISTS=0
+                    RECREATED_FROM_BACKUP=1
+                    echo "Account removed; will recreate $NEW_USER and restore files from backup."
+                    log_action "Proceeding to useradd + restore for $NEW_USER"
+                fi
+                ;;
+            2)
+                echo "Destructive overwrite: no backup. Removing user $NEW_USER and $PASSWD_HOME ..."
+                if ! userdel "$NEW_USER"; then
+                    echo "userdel failed; nothing was removed."
+                    log_action "Fresh overwrite aborted: userdel failed"
+                    exit 1
+                fi
+                if [[ -d "$PASSWD_HOME" ]]; then
+                    if ! rm -rf "$PASSWD_HOME"; then
+                        echo "Failed to remove $PASSWD_HOME; remove manually and run useradd if needed."
+                        log_action "Fresh overwrite: rm home failed"
+                        exit 1
+                    fi
+                fi
+                USER_ALREADY_EXISTS=0
+                OVERWRITE_FRESH=1
+                log_action "Fresh overwrite (no backup) for $NEW_USER — useradd next"
+                echo "Account removed; will create a new user with an empty home (skel only until keys step)."
+                ;;
+            3|*)
+                echo "Keeping existing account and home (idempotent steps follow)."
+                log_action "Existing user $NEW_USER: option 3 (no recreate)"
+                ;;
+        esac
+    else
+        echo "User '$NEW_USER' already exists; passwd home is '${PASSWD_HOME:-missing or unset}' (does not match $STANDARD_HOME). Skipping recreate menu — idempotent steps only."
+        log_action "Existing user $NEW_USER: non-standard or missing home; skip recreate prompts"
+    fi
 fi
 
 if [[ "$USER_ALREADY_EXISTS" -eq 0 ]]; then
@@ -91,6 +183,11 @@ if [[ "$USER_ALREADY_EXISTS" -eq 0 ]]; then
         log_action "User $NEW_USER created successfully."
     else
         echo "Failed to create user $NEW_USER. Check logs for details."
+        if [[ "${RECREATED_FROM_BACKUP:-0}" -eq 1 ]]; then
+            echo "Recreate in progress: home backup may still exist under ${HOME_BAK_ROOT:-unknown} (see $LOG_FILE)."
+        elif [[ "${OVERWRITE_FRESH:-0}" -eq 1 ]]; then
+            echo "Account was removed for fresh overwrite; fix user state manually (see $LOG_FILE)."
+        fi
         exit 1
     fi
 
@@ -99,10 +196,32 @@ if [[ "$USER_ALREADY_EXISTS" -eq 0 ]]; then
         log_action "Password set for $NEW_USER (password not logged)."
     else
         echo "Failed to set password for $NEW_USER. Check logs for details."
+        if [[ "${RECREATED_FROM_BACKUP:-0}" -eq 1 ]]; then
+            echo "Recreate in progress: original home backup may be at ${HOME_BAK_ROOT:-unknown} — see $LOG_FILE."
+        elif [[ "${OVERWRITE_FRESH:-0}" -eq 1 ]]; then
+            echo "Fresh overwrite failed after userdel; install may be inconsistent — see $LOG_FILE."
+        fi
         exit 1
     fi
 
     unset USER_PASSWORD
+fi
+
+if [[ "${RECREATED_FROM_BACKUP:-0}" -eq 1 ]] && [[ -n "${HOME_BACKUP_COPY:-}" ]] && [[ -d "$HOME_BACKUP_COPY" ]]; then
+    echo "Restoring files from backup into /home/$NEW_USER ..."
+    if cp -a "$HOME_BACKUP_COPY/." "/home/$NEW_USER/"; then
+        chown -R "$NEW_USER:$NEW_USER" "/home/$NEW_USER"
+        log_action "Restored home contents from backup for $NEW_USER"
+        if [[ -n "$HOME_BAK_ROOT" && -d "$HOME_BAK_ROOT" ]]; then
+            rm -rf "$HOME_BAK_ROOT"
+            HOME_BAK_ROOT=""
+            HOME_BACKUP_COPY=""
+            log_action "Removed temporary backup directory after successful restore"
+        fi
+    else
+        echo "ERROR: Restore from $HOME_BACKUP_COPY failed. Backup left at $HOME_BAK_ROOT — merge manually into /home/$NEW_USER and run chown -R $NEW_USER:$NEW_USER"
+        log_action "Restore cp failed; backup preserved at $HOME_BACKUP_COPY"
+    fi
 fi
 
 # Add the user to the sudo group

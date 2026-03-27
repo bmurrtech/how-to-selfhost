@@ -12,14 +12,14 @@ Scripts for user management, SSH hardening, and Fail2ban. Intended for **home LA
 
 - **`f2b-install.sh`**: Rewrites the same Fail2ban config files each run and **`systemctl restart fail2ban`** so changes (e.g. new `--whitelist`) apply; `apt install` is a no-op when already installed.
 - **`vps-sec-harden.sh`**: Skips duplicate sysctl/fstab/sshd template lines; **UFW** skips `allow` rules that already match **Anywhere** for 22/80/443 (and the chosen SSH source IP when applicable); skips `dpkg-reconfigure unattended-upgrades` if `20auto-upgrades` already exists. Package upgrades still run unless you skip them manually.
-- **`new-sudo-user.sh`**: If the user already exists, skips **`useradd`/password** and **keeps** a non-empty `authorized_keys`; keys come only from **pasted public key line(s)** (deduped); **never** reads/writes `/root/.ssh`; **AllowUsers** (if enabled) is replaced atomically (remove uncommented lines, append one line).
+- **`new-sudo-user.sh`**: If the account exists **and** passwd’s home is **`/home/<username>`** (canonical match), a menu offers **[1]** backup+**`userdel`**+recreate+restore, **[2]** destructive fresh overwrite (no backup), or **[3]** default idempotent steps only. If the account exists but home is non-standard or missing, **no** menu—only idempotent steps. Keys from **pasted** public lines only; **never** touches `/root/.ssh`.
 
 ## High-level overview (what each script does)
 
 | Script | Main actions (no secrets logged) |
 |--------|----------------------------------|
 | **f2b-install.sh** | Installs Fail2ban; builds `ignoreip` from RFC1918 + your whitelist; writes `/etc/fail2ban/jail.local` and `jail.d/*`; enables jails for sshd, postfix, dovecot, sieve, coturn (nginx optional). |
-| **new-sudo-user.sh** | Run as **root** (e.g. `sudo ./new-sudo-user.sh`): creates sudo user; **`authorized_keys` only from pasted public key line(s)** (multi-line until blank); does **not** touch `/root/.ssh`; optional `AllowUsers` (**y/N**, default **N**); restarts `ssh`/`sshd`; moves itself to `/root/scripts`. |
+| **new-sudo-user.sh** | Run as **root**: creates user, or if user exists **and** home is **`/home/name`**, menu **[1/2/3]** for backup+restore, destructive new home, or keep; non-standard home → no recreate menu; **`authorized_keys`** from paste only; optional `AllowUsers`; restarts SSH; moves to `/root/scripts`. |
 | **vps-sec-harden.sh** | Runs as your user (sudo): apt update/upgrade; disables IPv6 in sysctl; hardens sshd (PermitRootLogin no, password auth off, PAM unchanged); appends optional commented `AllowUsers` example only; installs UFW (22 / 80 / 443, optional SSH limited by source IP); disables `rpcbind` when present; secures `/run/shm` in fstab; unattended-upgrades; restarts sshd. |
 
 ## Recommended order (fresh VPS)
@@ -45,7 +45,7 @@ You can generate an SSH key pair in a password manager vault and use the **same 
 
 - **SSH hardening (`vps-sec-harden.sh`)**: Disables root login and password auth; does not enforce `AllowUsers` (see commented template in `sshd_config`). Ensure key-based login works and **test from a second SSH session** before closing your first. If you choose **static IP** for SSH in the UFW prompt, a wrong address can block new SSH sessions from other IPs; use your provider’s **console** to recover. PAM remains enabled (cloud-friendly).
 - **Fail2ban (`f2b-install.sh`)**: By default whitelists loopback and RFC1918. On a cloud VM, add your public IP with `--whitelist` so you don’t ban yourself.
-- **New sudo user (`new-sudo-user.sh`)**: By default **does not** change `AllowUsers` (answer **N**). If you choose **y**, it replaces only **uncommented** `AllowUsers` lines and leaves commented examples from **`vps-sec-harden.sh`** intact. Run via **`sudo`** so **`SUDO_USER`** is set when choosing restricted `AllowUsers`. Prefer your **public key on the new user** (paste step); do not rely on **`ssh root@`** on clouds with restricted root keys. Before **`vps-sec-harden.sh`**, confirm **`ssh -i … newuser@host`** works from a second session.
+- **New sudo user (`new-sudo-user.sh`)**: **AllowUsers** optional (default **N** for that prompt). Run via **`sudo`** when using restricted `AllowUsers`. Public keys via paste only. **Recreate** options **[1]/[2]** appear only when passwd home is **`/home/<username>`**; **[2]** is destructive (no backup). Uses console if **`userdel`** could fail. Failed restore from **[1]** leaves backup paths in the log.
 
 ## How to download (wget)
 
@@ -104,7 +104,7 @@ sudo fail2ban-client unban --all
 
 ## new-sudo-user.sh
 
-Creates a sudo user with password (not logged). Builds **`~/.ssh/authorized_keys` for that user only** from **pasted public key line(s)** (one per line, empty line to finish); duplicates are skipped; **`/root/.ssh` is never used**. **AllowUsers** is **optional** (default **N**); when **y**, the admin name is **`SUDO_USER`** if you invoked `sudo ./new-sudo-user.sh`, or a username you enter (e.g. `ubuntu`, not `root`). Relocates itself to `/root/scripts` after first run.
+Creates a sudo user with password (not logged). If the account **already exists** and **`getent passwd`** home matches **`/home/<username>`**, you get **[1]** backup home then recreate+restore, **[2]** **`userdel`** + remove home with **no** backup, or **[3]** default: keep the account (idempotent sudo/SSH/`AllowUsers` only). Otherwise (non-standard home) there is **no** recreate prompt. **`authorized_keys`** only from **pasted** lines. Relocates to `/root/scripts` after first run.
 
 ---
 
