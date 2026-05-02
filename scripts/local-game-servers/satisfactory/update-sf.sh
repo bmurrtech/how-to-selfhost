@@ -12,7 +12,9 @@
 #   SATISFACTORY_NO_RESTART    If 1, after a successful update do not restart the unit (default is restart when root).
 #   SATISFACTORY_NETWORK_CHECK If 1, fail fast if Steam API is unreachable (optional).
 #   SATISFACTORY_HEALTH_CHECK  If 1 after restart, wait briefly for listening game port (optional).
-#   SATISFACTORY_UPDATE_LOG    Append structured log lines here (default: /var/log/satisfactory-update.log if writable)
+#   SATISFACTORY_UPDATE_LOG       Append structured log lines here (default: /var/log/satisfactory-update.log if writable)
+#   SATISFACTORY_SAVE_ARCHIVE_DIR Directory for SaveGames .bak copies + .tar.gz (default: /home/steam/satisfactory-save-archives)
+#   SATISFACTORY_SKIP_SAVE_BACKUP If 1, skip SaveGames archive before SteamCMD
 #
 # Usage: sudo ./update-sf.sh   [--dry-run]   [--install-dir DIR]
 set -euo pipefail
@@ -23,6 +25,9 @@ readonly STEAM_USER="steam"
 readonly SERVICE_NAME="satisfactory"
 readonly MARKER_REL="FactoryServer.sh"
 readonly LOG_TAG="[update-sf]"
+STEAM_HOME="/home/${STEAM_USER}"
+SAVE_SG="${STEAM_HOME}/.config/Epic/FactoryGame/Saved/SaveGames"
+LAST_SAVE_BACKUP_PATH=""
 
 DRY_RUN=0
 INSTALL_DIR="${SATISFACTORY_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
@@ -63,8 +68,11 @@ die() {
 # Read Steam appmanifest for debug (buildid / betakey). Paths relative to force_install_dir.
 read_manifest_field() {
   local mf="$1" key="$2"
-  [[ -f "$mf" ]] || { echo ""; return 1; }
-  grep -m1 "\"${key}\"" "$mf" 2>/dev/null | sed -E "s/.*\"${key}\"[[:space:]]+\"([^\"]*)\".*/\\1/" | tr -d '\r' || echo ""
+  local line
+  [[ -f "$mf" ]] || { echo ""; return 0; }
+  line="$(grep -m1 "\"${key}\"" "$mf" 2>/dev/null || true)"
+  [[ -z "$line" ]] && { echo ""; return 0; }
+  sed -E "s/.*\"${key}\"[[:space:]]+\"([^\"]*)\".*/\\1/" <<<"$line" | tr -d '\r'
 }
 
 log_manifest_state() {
@@ -78,6 +86,83 @@ log_manifest_state() {
   buildid="$(read_manifest_field "$mf" "buildid")"
   betakey="$(read_manifest_field "$mf" "betakey")"
   log_line "INFO" "${phase} steam_app=${APP_ID} buildid=${buildid:-unknown} betakey=${betakey:-} (empty betakey = public branch)"
+}
+
+read_build_version_field() {
+  local f="$1" key="$2"
+  local line
+  [[ -f "$f" ]] || { echo ""; return 0; }
+  line="$(grep -oE "\"${key}\"[[:space:]]*:[[:space:]]*[0-9]+" "$f" 2>/dev/null | head -1 || true)"
+  [[ -z "$line" ]] && { echo ""; return 0; }
+  grep -oE '[0-9]+$' <<<"$line"
+}
+
+backup_satisfactory_saves() {
+  [[ "${SATISFACTORY_SKIP_SAVE_BACKUP:-0}" == "1" ]] && {
+    log_line "INFO" "skipping SaveGames backup (SATISFACTORY_SKIP_SAVE_BACKUP=1)"
+    return 0
+  }
+  local archive_dir="${SATISFACTORY_SAVE_ARCHIVE_DIR:-${STEAM_HOME}/satisfactory-save-archives}"
+  mkdir -p "$archive_dir"
+  chown "${STEAM_USER}:${STEAM_USER}" "$archive_dir" 2>/dev/null || true
+  if [[ ! -d "$SAVE_SG" ]]; then
+    log_line "INFO" "no SaveGames dir yet (${SAVE_SG}); nothing to archive"
+    return 0
+  fi
+  local stamp dest
+  stamp="$(date +%Y%m%d-%H%M%S)"
+  dest="${archive_dir}/SaveGames-${stamp}.bak"
+  log_line "INFO" "archiving SaveGames -> ${dest} and SaveGames-${stamp}.tar.gz"
+  cp -a "$SAVE_SG" "$dest"
+  chown -R "${STEAM_USER}:${STEAM_USER}" "$dest"
+  tar -czf "${archive_dir}/SaveGames-${stamp}.tar.gz" -C "$(dirname "$SAVE_SG")" "$(basename "$SAVE_SG")"
+  chown "${STEAM_USER}:${STEAM_USER}" "${archive_dir}/SaveGames-${stamp}.tar.gz"
+  LAST_SAVE_BACKUP_PATH="$dest"
+}
+
+restore_saves_if_needed() {
+  [[ -z "${LAST_SAVE_BACKUP_PATH}" ]] && return 0
+  local bak_sav=0
+  [[ -d "${LAST_SAVE_BACKUP_PATH}/server" ]] && bak_sav=$(find "${LAST_SAVE_BACKUP_PATH}/server" -maxdepth 1 -name '*.sav' 2>/dev/null | wc -l)
+  [[ "$bak_sav" -eq 0 ]] && return 0
+  mkdir -p "$SAVE_SG"
+  local n_after=0
+  [[ -d "${SAVE_SG}/server" ]] && n_after=$(find "${SAVE_SG}/server" -maxdepth 1 -name '*.sav' 2>/dev/null | wc -l)
+  if [[ "$n_after" -eq 0 ]]; then
+    log_line "WARN" "no .sav under ${SAVE_SG}/server after update; restoring from ${LAST_SAVE_BACKUP_PATH}"
+    cp -a "${LAST_SAVE_BACKUP_PATH}/." "$SAVE_SG/"
+    chown -R "${STEAM_USER}:${STEAM_USER}" "$SAVE_SG"
+    log_line "INFO" "SaveGames restored from backup"
+  fi
+}
+
+print_installed_version_banner() {
+  local mf="${INSTALL_DIR}/steamapps/appmanifest_${APP_ID}.acf"
+  local bid bv maj min pat cl
+  bid="$(read_manifest_field "$mf" "buildid")"
+  bv="$(find "$INSTALL_DIR" -name 'Build.version' -print -quit 2>/dev/null || true)"
+  maj=""; min=""; pat=""; cl=""
+  if [[ -n "$bv" ]]; then
+    maj="$(read_build_version_field "$bv" MajorVersion)"
+    min="$(read_build_version_field "$bv" MinorVersion)"
+    pat="$(read_build_version_field "$bv" PatchVersion)"
+    cl="$(read_build_version_field "$bv" Changelist)"
+  fi
+  local branch="public (stable)"
+  [[ -n "$BETA_FLAG" ]] && branch="Experimental"
+  local eng_line="  Engine Build.version not found under ${INSTALL_DIR} (normal on some layouts)."
+  if [[ -n "$maj" || -n "$cl" ]]; then
+    eng_line="  Engine (approx):  ${maj:-?}.${min:-?}.${pat:-?}  Changelist: ${cl:-?}"
+  fi
+  printf '%s\n' \
+    "" \
+    "======== Satisfactory dedicated server — installed version ========" \
+    "  Steam branch:     ${branch}" \
+    "  Steam buildid:    ${bid:-unknown}   (appmanifest ${APP_ID})" \
+    "$eng_line" \
+    "  Compare to your Steam client: Library → Satisfactory → Properties → Updates / Betas." \
+    "======================================================================" \
+    ""
 }
 
 while [[ $# -gt 0 ]]; do
@@ -152,7 +237,7 @@ fi
 if [[ "$DRY_RUN" -eq 1 ]]; then
   [[ -d "$INSTALL_DIR" ]] || log_line "WARN" "dry-run: install directory missing: ${INSTALL_DIR}"
   [[ -f "${INSTALL_DIR}/${MARKER_REL}" ]] || log_line "WARN" "dry-run: marker ${MARKER_REL} missing under ${INSTALL_DIR}"
-  log_line "INFO" "dry-run: would optional network check; flock ${INSTALL_DIR}/.update-sf.lock; stop ${SERVICE_NAME} if active (as root); log appmanifest buildid; sudo -u ${STEAM_USER} steamcmd app_update ${APP_ID} validate; log buildid again; systemctl restart ${SERVICE_NAME} on success (root)"
+  log_line "INFO" "dry-run: would optional network check; flock; stop if active; archive SaveGames to .bak/.tar.gz; steamcmd validate; restore saves if missing; print version banner; systemctl restart on success (root)"
   exit 0
 fi
 
@@ -240,6 +325,8 @@ elif [[ "${SATISFACTORY_SKIP_SERVICE:-0}" != "1" ]] && [[ "${EUID:-$(id -u)}" -n
   log_line "WARN" "not root: cannot stop/restart ${SERVICE_NAME}; use sudo for a full update or stop the server manually before running"
 fi
 
+backup_satisfactory_saves
+
 STEAM_MANIFEST="${INSTALL_DIR}/steamapps/appmanifest_${APP_ID}.acf"
 PRE_BUILDID="$(read_manifest_field "$STEAM_MANIFEST" "buildid")"
 log_manifest_state "pre_steamcmd"
@@ -261,5 +348,8 @@ log_manifest_state "post_steamcmd"
 if [[ -n "$PRE_BUILDID" && -n "$POST_BUILDID" && "$PRE_BUILDID" == "$POST_BUILDID" ]]; then
   log_line "WARN" "buildid unchanged (${POST_BUILDID}): Steam may already be latest, or login/update failed silently. In-game incompatible version is very often stable vs Experimental mismatch — match Steam client branch to server (see beta_flag logs above)."
 fi
+
+restore_saves_if_needed
+print_installed_version_banner
 
 log_line "INFO" "update complete install_dir=${INSTALL_DIR}"
