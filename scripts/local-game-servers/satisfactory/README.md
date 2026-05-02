@@ -8,6 +8,7 @@ Scripts to install and run a Satisfactory dedicated game server on Linux (SteamC
 |--------|------|
 | `satisfactory.sh` | First-time (or **full**) setup: packages, optional UFW, Steam user, SteamCMD, initial game files, `satisfactory.service`, SSH/Fail2ban/unattended-upgrades. **Idempotent**: if `satisfactory.service` already exists, you can choose **Quick** mode to switch **stable ↔ Experimental** and refresh Steam files + systemd **without** redoing the firewall or full security wizard. |
 | `update-sf.sh` | Routine **Steam depot** update: stops the unit if needed, **archives SaveGames** (`.bak` tree + `.tar.gz`), runs SteamCMD `validate`, **restores** saves if the `server/` tree lost `.sav` files, prints an **installed-version summary**, then **`systemctl restart satisfactory`**. |
+| `reset-admin-pw.sh` | **Admin password reset** (official path: backup + delete `ServerSettings.<port>.sav`, restart) or **inspect** SaveGames / ini for hints. Does **not** recover a guaranteed cleartext password from binary `ServerSettings` files. |
 
 Dedicated saves on Linux (official layout) live under the **`steam` user** at:
 
@@ -112,12 +113,40 @@ Compare **`buildid`** and the **Changelist** / version fields in `Build.version`
 2. **Confirm buildids** — Use the one-liner and/or `/var/log/satisfactory-update.log`.
 3. **Epic / other stores** — Same build expectation as Steam.
 
+## Reset admin password (`reset-admin-pw.sh`)
+
+Satisfactory does **not** ship a console command to change the in-game **admin** password. The supported reset is to remove **`ServerSettings.<port>.sav`** under the `steam` user’s SaveGames tree (often `7777` or `15777` in the filename), then **reclaim** the server in the client and set a new password. That file also holds other manager settings (server name, auto-load session, etc.), so the script **backs up** copies under `/home/steam/satisfactory-save-archives/ServerSettings-preserver-<timestamp>/` before deletion.
+
+### Download (placeholder raw URL)
+
+```bash
+# PLACEHOLDER — replace when published, e.g.:
+# wget 'https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/satisfactory/reset-admin-pw.sh' -O reset-admin-pw.sh
+chmod +x reset-admin-pw.sh
+```
+
+### Run
+
+```bash
+sudo ./reset-admin-pw.sh
+```
+
+| Menu | What it does |
+|------|----------------|
+| **1** | Confirms with `YES`, stops **`satisfactory`**, backs up then **deletes** `SaveGames/ServerSettings.*.sav`, starts the unit. You then use **Server Manager** in the game client to **claim** the server and set a **new** admin password. |
+| **2** | **Inspect**: lists `ServerSettings.*.sav`, scans `Saved/**/*.ini` / `*.cfg` for obvious plaintext password-like keys (if your build stores any), and explains that the real admin secret in `.sav` is **not** reliably recoverable. Optional **`strings`** dump on the newest `ServerSettings` file for debugging only (still not a guaranteed password). |
+
+**World saves** under `SaveGames/server/` are not removed by this script; still keep your usual backups before any admin reset.
+
+Environment: **`SATISFACTORY_STEAM_USER`** (default `steam`), **`SATISFACTORY_ARCHIVE_DIR`** (default `/home/steam/satisfactory-save-archives`).
+
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
 | `satisfactory.sh` | Full or **Quick** setup; idempotent re-run; SaveGames backup before SteamCMD; prints installed version summary after update. |
 | `update-sf.sh` | Idempotent depot update, SaveGames archive + conditional restore, flock, systemd restart, version banner. |
+| `reset-admin-pw.sh` | Interactive admin reset (backup + delete `ServerSettings.*.sav`) or inspect / optional `strings` hints. |
 
 ## Service
 
