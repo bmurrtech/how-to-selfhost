@@ -30,11 +30,233 @@ Scripts for user management, SSH hardening, and Fail2ban. Intended for **home LA
 
 ## Vault-managed SSH keys (e.g. Bitwarden)
 
-You can generate an SSH key pair in a password manager vault and use the **same public key** on the server and the private key on every device that vault supports. Rules of thumb:
+You can generate an SSH key pair in a password manager vault and use the **same public key** on the server and the private key on every device that vault supports.
+
+### Rules of thumb
 
 - Install only the **public** key (one line: `ssh-ed25519 AAAA… comment`) into each Unix account’s `~/.ssh/authorized_keys` you need to use (`chmod 700` `~/.ssh`, `chmod 600` `authorized_keys`).
 - Never commit or paste the **private** key into the repo or chat.
 - On many clouds, **`root`**’s `authorized_keys` uses **`command=`** (forced message / break-glass). Put your day-to-day **public** key on the **created user** via **`new-sudo-user.sh`**’s paste step; the script **never** reads or writes **`/root/.ssh`**, so break-glass keys stay as the provider left them.
+- If the script prints **could not parse** / **WARNING** after a paste, the **public** line may be **truncated**—re-copy the full single line from the vault.
+
+### Root cause: rich-text editors break private keys
+
+Saving a **private key** with **TextEdit** (default RTF/plain quirks), **Word**, or mail clients often introduces **curly quotes**, wrong **line endings**, **BOM**, or truncated lines. OpenSSH then reports **`is not a key file`** or **`invalid format`** even when Bitwarden generated a valid pair.
+
+**Fix:** copy the **private key** from Bitwarden to the **system clipboard**, then write it with a **shell** (or another tool below) so bytes stay exact. Always verify:
+
+```bash
+ssh-keygen -lf ~/.ssh/your_chosen_filename
+```
+
+…must succeed and show the expected type (e.g. **ED25519**) and fingerprint matching your **public** line.
+
+### Clipboard to file (fastest; use real paths)
+
+**macOS** (Terminal; avoid TextEdit for the key body):
+
+```bash
+pbpaste > ~/.ssh/oracle_btm_ed25519
+chmod 600 ~/.ssh/oracle_btm_ed25519
+ssh-keygen -lf ~/.ssh/oracle_btm_ed25519
+```
+
+**Linux** (X11, if `xclip` is installed):
+
+```bash
+xclip -selection clipboard -o > ~/.ssh/oracle_btm_ed25519
+chmod 600 ~/.ssh/oracle_btm_ed25519
+ssh-keygen -lf ~/.ssh/oracle_btm_ed25519
+```
+
+**Linux** (Wayland, if `wl-clipboard` is installed): `wl-paste > ~/.ssh/oracle_btm_ed25519` then `chmod 600` and `ssh-keygen -lf` as above.
+
+**Linux** (no clipboard tool): `nano ~/.ssh/oracle_btm_ed25519`, paste once, save; or `cat > ~/.ssh/oracle_btm_ed25519`, paste, then **Ctrl-D**; then `chmod 600`.
+
+**Windows** (PowerShell; multiline clipboard):
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.ssh" | Out-Null
+Get-Clipboard -Raw | Set-Content -Path "$env:USERPROFILE\.ssh\oracle_btm_ed25519" -Encoding utf8NoBOM
+```
+
+For **OpenSSH for Windows**, remove inherited ACLs and grant **only** your user access (adjust the path if needed):
+
+```powershell
+$key = "$env:USERPROFILE\.ssh\oracle_btm_ed25519"
+icacls $key /inheritance:r
+icacls $key /grant:r "$($env:USERNAME):F"
+```
+
+Then test: `ssh-keygen -lf "$env:USERPROFILE\.ssh\oracle_btm_ed25519"`.
+
+Prefer **VS Code** or **Notepad** saving **UTF-8** (no BOM) if you edit by hand; avoid smart quotes.
+
+### Optional GUI / clients (macOS)
+
+If you do not want to rely on Terminal for daily SSH:
+
+| Client | Best for | Notes |
+|--------|----------|-------|
+| **Termius** | PuTTY-like workflow | Integrated host list and key manager; paste private keys from Bitwarden; sync across devices; replaces PuTTY / PuTTYgen-style flow for many users. |
+| **iTerm2** | Terminal-first | Replacement for Terminal.app; works with native `ssh` and `~/.ssh/config`; fewer paste and scroll annoyances than default terminal. |
+| **VS Code + Remote SSH** | Development | Remote explorer and integrated terminal; uses your existing SSH config and `IdentityFile` paths under the hood. |
+
+### Optional tooling (Windows and Linux)
+
+| Platform | Option | Notes |
+|----------|--------|-------|
+| **Windows** | **Windows Terminal** + OpenSSH | Built-in `ssh`; use PowerShell clipboard-to-file above; fix **icacls** on private keys for OpenSSH for Windows. |
+| **Windows** | **PuTTY** | Common legacy stack; uses `.ppk` keys unless you convert with PuTTYgen or point PuTTY at OpenSSH-format keys where supported. |
+| **Windows** | **VS Code + Remote SSH** | Same remote workflow as on macOS; keep keys in `~/.ssh` with correct permissions. |
+| **Linux** | **Native `ssh` in any terminal** | Prefer clipboard tools or `nano`/`vim` / here-doc for keys; avoid word processors. |
+| **Linux** | **Terminator, Tilix, Konsole, etc.** | Terminal multiplexers / better tabs; still use system `ssh` and plain-text key files. |
+| **Linux** | **VS Code + Remote SSH** | Same as other platforms if you develop on the box you SSH from. |
+
+### SSH client config (`~/.ssh/config`)
+
+Use one entry per server so you can run **`ssh my-alias`** instead of long commands. Paths below use **`~/.ssh/`** (on **Windows** with OpenSSH this maps under **`%USERPROFILE%\.ssh`**).
+
+**Create or edit the file**
+
+**macOS / Linux** (Terminal):
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+nano ~/.ssh/config
+chmod 600 ~/.ssh/config
+```
+
+**Windows** (PowerShell; create file if missing):
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.ssh" | Out-Null
+notepad "$env:USERPROFILE\.ssh\config"
+# After save, restrict config file (recommended):
+icacls "$env:USERPROFILE\.ssh\config" /inheritance:r
+icacls "$env:USERPROFILE\.ssh\config" /grant:r "$($env:USERNAME):F"
+```
+
+Paste a template below, then **replace every `CHANGE_ME`** and the example **`Host my-alias`** name if you like. Duplicate the **`Host`** block (or uncomment the second block) for more servers. Test with **`ssh -G my-alias`** (substitute your **`Host`** keyword; prints resolved config) then **`ssh my-alias`**.
+
+**macOS** (includes Keychain integration supported by Apple’s OpenSSH build):
+
+```text
+# First host — rename Host alias and set HostName / User / IdentityFile
+Host my-alias                          # CHANGE: short label; connect with: ssh my-alias
+    HostName CHANGE_ME                 # CHANGE: server DNS or IP from your provider
+    User CHANGE_ME                     # CHANGE: Unix account on that server
+    IdentityFile ~/.ssh/CHANGE_ME      # CHANGE: private key file for this host (chmod 600)
+
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+
+    StrictHostKeyChecking ask
+    PreferredAuthentications publickey
+
+    AddKeysToAgent yes
+    UseKeychain yes
+
+    Compression yes
+    LogLevel INFO
+
+# --- Add more servers: copy the whole Host block above, or uncomment and edit below ---
+# Host another-alias
+#     HostName CHANGE_ME
+#     User CHANGE_ME
+#     IdentityFile ~/.ssh/CHANGE_ME
+#     IdentitiesOnly yes
+#     ServerAliveInterval 60
+#     ServerAliveCountMax 3
+#     TCPKeepAlive yes
+#     StrictHostKeyChecking ask
+#     PreferredAuthentications publickey
+#     AddKeysToAgent yes
+#     UseKeychain yes
+#     Compression yes
+#     LogLevel INFO
+```
+
+**Linux** (same behaviour except **no** `UseKeychain`; `AddKeysToAgent` is optional—remove both agent lines if your distro’s `ssh` warns about unknown options):
+
+```text
+Host my-alias                          # CHANGE
+    HostName CHANGE_ME                 # CHANGE
+    User CHANGE_ME                     # CHANGE
+    IdentityFile ~/.ssh/CHANGE_ME      # CHANGE
+
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+
+    StrictHostKeyChecking ask
+    PreferredAuthentications publickey
+
+    AddKeysToAgent yes
+
+    Compression yes
+    LogLevel INFO
+
+# Host another-alias
+#     HostName CHANGE_ME
+#     User CHANGE_ME
+#     IdentityFile ~/.ssh/CHANGE_ME
+#     IdentitiesOnly yes
+#     ServerAliveInterval 60
+#     ServerAliveCountMax 3
+#     TCPKeepAlive yes
+#     StrictHostKeyChecking ask
+#     PreferredAuthentications publickey
+#     AddKeysToAgent yes
+#     Compression yes
+#     LogLevel INFO
+```
+
+**Windows** (OpenSSH; **no** `UseKeychain`). You may use forward slashes in **`IdentityFile`**, e.g. **`~/.ssh/CHANGE_ME`**:
+
+```text
+Host my-alias                          # CHANGE
+    HostName CHANGE_ME                 # CHANGE
+    User CHANGE_ME                     # CHANGE
+    IdentityFile ~/.ssh/CHANGE_ME      # CHANGE
+
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+
+    StrictHostKeyChecking ask
+    PreferredAuthentications publickey
+
+    AddKeysToAgent yes
+
+    Compression yes
+    LogLevel INFO
+
+# Host another-alias
+#     HostName CHANGE_ME
+#     User CHANGE_ME
+#     IdentityFile ~/.ssh/CHANGE_ME
+#     IdentitiesOnly yes
+#     ServerAliveInterval 60
+#     ServerAliveCountMax 3
+#     TCPKeepAlive yes
+#     StrictHostKeyChecking ask
+#     PreferredAuthentications publickey
+#     AddKeysToAgent yes
+#     Compression yes
+#     LogLevel INFO
+```
+
+If **`ssh`** reports an unknown option, remove the line or check **`man ssh_config`** for your OpenSSH version.
+
+### Auth still failing?
+
+**“Permission denied (publickey)”** is usually on the **client**: **`IdentityFile`** must reference a **valid OpenSSH private key** for the same pair as a line in **`authorized_keys`**. OpenSSH format starts with **`-----BEGIN OPENSSH PRIVATE KEY-----`** for many modern keys. Filename **labels** (e.g. `rsa-key-…`) do not change the algorithm inside the file. **`ssh -vvv`** shows which keys the client offers. Server-side **`new-sudo-user.sh`** prints **`ssh-keygen -lf`** on **`authorized_keys`** for comparison.
 
 ## Intended environment
 

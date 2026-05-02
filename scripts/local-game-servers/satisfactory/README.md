@@ -26,8 +26,7 @@ The updater is **idempotent**: safe to run repeatedly; it always resolves **`SAT
 Until the script is available at your preferred raw Git URL, copy `update-sf.sh` onto the server (e.g. `scp`) or paste the file from this repository. When you have the final raw link, use it like the installer below.
 
 ```bash
-# PLACEHOLDER — replace with your real raw URL, e.g.:
-# wget 'https://raw.githubusercontent.com/OWNER/REPO/refs/heads/main/scripts/local-game-servers/satisfactory/update-sf.sh' -O update-sf.sh
+wget 'https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/satisfactory/update-sf.sh' -O update-sf.sh
 chmod +x update-sf.sh
 ```
 

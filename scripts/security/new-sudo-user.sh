@@ -29,6 +29,19 @@ function log_action {
     echo "$(date): $message" >> "$LOG_FILE"
 }
 
+# True if ssh-keygen accepts the line as a public key (catches truncated / bad pastes).
+function pubkey_line_valid {
+    local f line="$1"
+    f="$(mktemp)" || return 1
+    printf '%s\n' "$line" >"$f"
+    if ssh-keygen -lf "$f" &>/dev/null; then
+        rm -f "$f"
+        return 0
+    fi
+    rm -f "$f"
+    return 1
+}
+
 # Function to prompt for user input with verification
 function prompt_input {
     local var_name="$1"
@@ -257,14 +270,24 @@ else
 fi
 
 echo "Paste PUBLIC key line(s) for $NEW_USER only (e.g. from Bitwarden). One key per line; press ENTER on an empty line when done:"
+DUP_SKIP_TIP=1
 while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "${line// }" ]] && break
     if grep -qFx "$line" "$AUTH_KEYS" 2>/dev/null; then
         echo "(Skipped: line already in authorized_keys.)"
+        if [[ "$DUP_SKIP_TIP" -eq 1 ]]; then
+            echo "  Tip: if login fails with publickey, IdentityFile must be the matching *private* key (same pair and algorithm as this line, e.g. ed25519 vs rsa)."
+            DUP_SKIP_TIP=0
+        fi
         log_action "Skipped duplicate pasted public key line for $NEW_USER."
     else
-        printf '%s\n' "$line" >>"$AUTH_KEYS"
-        log_action "Appended pasted public key line for $NEW_USER."
+        if pubkey_line_valid "$line"; then
+            printf '%s\n' "$line" >>"$AUTH_KEYS"
+            log_action "Appended pasted public key line for $NEW_USER."
+        else
+            echo "WARNING: not appended — ssh-keygen rejected this line (truncated paste, extra text, or wrong format). Re-copy the full single line from your vault."
+            log_action "Invalid public key line rejected (not appended) for $NEW_USER"
+        fi
     fi
 done
 
@@ -276,6 +299,19 @@ fi
 chown -R "$NEW_USER:$NEW_USER" "/home/$NEW_USER/.ssh"
 chmod 700 "/home/$NEW_USER/.ssh"
 chmod 600 "$AUTH_KEYS"
+
+if [[ -s "$AUTH_KEYS" ]]; then
+    echo ""
+    echo "Authorized keys on server (fingerprints). Your SSH client must use the *matching private* file for the same algorithm and key pair:"
+    if ssh-keygen -lf "$AUTH_KEYS" 2>/dev/null; then
+        :
+    else
+        echo "  (Could not parse fingerprints — check each line is one valid public key: ssh-ed25519 AAAA... or ssh-rsa ...)"
+    fi
+    echo "Example: a line starting with ssh-ed25519 requires an ed25519 private key (IdentityFile), not an rsa-key-... file unless that RSA public key is also listed here."
+    echo "Compare locally: ssh-keygen -lf ~/.ssh/your_private_key  (must match a fingerprint above.)"
+    echo ""
+fi
 
 read -rp "Restrict sshd with AllowUsers for an existing admin + $NEW_USER? (y/N): " RESTRICT_USERS
 if [[ "${RESTRICT_USERS,,}" == "y" ]]; then
@@ -326,5 +362,5 @@ else
     log_action "Script already secured in $SECURE_DIR."
 fi
 
-echo "User $NEW_USER created and configured successfully. Actions logged to $LOG_FILE."
-echo "Next: from your workstation, verify login (new terminal): ssh -i /path/to/private_key $NEW_USER@<this-host>"
+echo "User $NEW_USER configured successfully. Actions logged to $LOG_FILE."
+echo "Next: from your workstation, verify login (new terminal): ssh -i /path/to/MATCHING_private_key $NEW_USER@<this-host>"
