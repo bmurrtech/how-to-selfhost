@@ -41,7 +41,7 @@ Rules:
 ## Repo layout (scripts only)
 
 - `scripts/security/` — f2b-install.sh, new-sudo-user.sh, vps-sec-harden.sh
-- `scripts/local-game-servers/` — satisfactory.sh, update-sf.sh, reset-admin-pw.sh (satisfactory/), palworld.sh
+- `scripts/local-game-servers/` — satisfactory.sh, update-sf.sh, reset-admin-pw.sh, navmesh-patch.sh (satisfactory/), palworld.sh
 - `scripts/wireguard/` — wg-selhost.sh, wg-cloud-init.yaml
 - `scripts/github/` — gh-wsl2-auth-setup.sh
 

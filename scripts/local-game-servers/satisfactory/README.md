@@ -9,6 +9,7 @@ Scripts to install and run a Satisfactory dedicated game server on Linux (SteamC
 | `satisfactory.sh` | First-time (or **full**) setup: packages, optional UFW, Steam user, SteamCMD, initial game files, `satisfactory.service`, SSH/Fail2ban/unattended-upgrades. **Idempotent**: if `satisfactory.service` already exists, you can choose **Quick** mode to switch **stable ↔ Experimental** and refresh Steam files + systemd **without** redoing the firewall or full security wizard. |
 | `update-sf.sh` | Routine **Steam depot** update: stops the unit if needed, **archives SaveGames** (`.bak` tree + `.tar.gz`), runs SteamCMD `validate`, **restores** saves if the `server/` tree lost `.sav` files, prints an **installed-version summary**, then **`systemctl restart satisfactory`**. |
 | `reset-admin-pw.sh` | **Admin password reset** (official path: backup + delete `ServerSettings.<port>.sav`, restart) or **inspect** SaveGames / ini for hints. Does **not** recover a guaranteed cleartext password from binary `ServerSettings` files. |
+| `navmesh-patch.sh` | Optional **Engine.ini** tweak for navmesh log spam on large saves; optional SteamCMD **validate**; restarts **`satisfactory`**. |
 
 Dedicated saves on Linux (official layout) live under the **`steam` user** at:
 
@@ -113,6 +114,61 @@ Compare **`buildid`** and the **Changelist** / version fields in `Build.version`
 2. **Confirm buildids** — Use the one-liner and/or `/var/log/satisfactory-update.log`.
 3. **Epic / other stores** — Same build expectation as Steam.
 
+## Monitoring & debugging
+
+Service name is **`satisfactory`**. Default game install: **`/home/steam/sfserver`**. SteamCMD is usually **`/home/steam/steamcmd`** (symlink). The installer also appends stdout/stderr to **`/var/log/satisfactory.log`** / **`satisfactory.err`**.
+
+| Command | What it does |
+|---------|----------------|
+| `sudo systemctl status satisfactory` | State, PID, memory, last log lines — quick health check. |
+| `sudo systemctl is-active satisfactory` | Prints `active` if running; otherwise `inactive` or `failed`. |
+| `sudo systemctl list-units --type=service --no-pager` (look for `satisfactory`) | Confirms the unit appears in the service list. |
+| `sudo journalctl -u satisfactory -f` | **Live** service logs (like `tail -f`) — crashes, restarts, SteamCMD **ExecStartPre**, engine warnings. |
+| `sudo journalctl -u satisfactory --since "10 minutes ago"` | Logs in a time window. |
+| `sudo journalctl -u satisfactory -n 50 --no-pager` | Last 50 lines, no pager. |
+| `sudo systemctl restart satisfactory` | Restarts the process; **`ExecStartPre`** runs SteamCMD update/validate again (see unit file). |
+| `sudo systemctl stop satisfactory` | Graceful stop before manual edits or patches. |
+| `sudo systemctl start satisfactory` | Start if stopped. |
+| `sudo tail -f /var/log/satisfactory.log` | File log from **StandardOutput** (if configured in unit). |
+| `sudo tail -f /var/log/satisfactory.err` | File log from **StandardError**. |
+| `sudo tail -f /home/steam/sfserver/FactoryGame/Saved/Logs/FactoryGame.log` | In-tree game log when present (path follows **`WorkingDirectory=/home/steam/sfserver`**). |
+
+**SteamCMD validate** (repair / verify app **1690800** without relying on systemd):
+
+```bash
+sudo -u steam /home/steam/steamcmd +force_install_dir /home/steam/sfserver +login anonymous +app_update 1690800 validate +quit
+```
+
+Use **`-beta experimental`** in the same command line if your server uses the experimental branch (match `satisfactory.service`).
+
+## Navmesh log spam (`navmesh-patch.sh`)
+
+Some dedicated servers (often **large saves** after **Update 8+**) spam logs like **“Navmesh bounds are too large! Limiting requested tiles count … to 65536”**. That is usually a **warning** (nav tile cap), but it can add load. Coffee Stain does not expose a player-facing `tileNumberHardLimit` tweak; this script applies a common Unreal mitigation: under **`[/Script/Engine.NavigationSystemV1]`** set **`bGenerateNavigationOnlyAroundNavigationInvokers=True`** in **`FactoryGame/Saved/Config/LinuxServer/Engine.ini`** (under the install dir, and **`~/.config/Epic/.../LinuxServer/Engine.ini`** if that file already exists).
+
+**Before running:** back up saves (`update-sf.sh` / manual copy). Stop players if needed.
+
+### Download (placeholder raw URL)
+
+```bash
+# PLACEHOLDER — replace when published, e.g.:
+# wget 'https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/local-game-servers/satisfactory/navmesh-patch.sh' -O navmesh-patch.sh
+chmod +x navmesh-patch.sh
+```
+
+### Run
+
+```bash
+sudo ./navmesh-patch.sh
+```
+
+Optional: **`--validate`** runs SteamCMD **`app_update … validate`** after the ini change. **`--dry-run`** prints paths only.
+
+```bash
+sudo ./navmesh-patch.sh --validate
+```
+
+If warnings persist: reduce extreme factory sprawl, update to the latest game build, consider modded pathfinding helpers (SMM). A simple **restart** alone sometimes reduces noise after bounds recalc.
+
 ## Reset admin password (`reset-admin-pw.sh`)
 
 Satisfactory does **not** ship a console command to change the in-game **admin** password. The supported reset is to remove **`ServerSettings.<port>.sav`** under the `steam` user’s SaveGames tree (often `7777` or `15777` in the filename), then **reclaim** the server in the client and set a new password. That file also holds other manager settings (server name, auto-load session, etc.), so the script **backs up** copies under `/home/steam/satisfactory-save-archives/ServerSettings-preserver-<timestamp>/` before deletion.
@@ -147,6 +203,7 @@ Environment: **`SATISFACTORY_STEAM_USER`** (default `steam`), **`SATISFACTORY_AR
 | `satisfactory.sh` | Full or **Quick** setup; idempotent re-run; SaveGames backup before SteamCMD; prints installed version summary after update. |
 | `update-sf.sh` | Idempotent depot update, SaveGames archive + conditional restore, flock, systemd restart, version banner. |
 | `reset-admin-pw.sh` | Interactive admin reset (backup + delete `ServerSettings.*.sav`) or inspect / optional `strings` hints. |
+| `navmesh-patch.sh` | Append NavigationSystemV1 ini tweak (+ optional SteamCMD validate); restart service. |
 
 ## Service
 
