@@ -9,7 +9,7 @@
 #   SATISFACTORY_BETA          If set to "experimental", passes -beta experimental to SteamCMD.
 #                              If unset, tries to infer from /etc/systemd/system/satisfactory.service.
 #   SATISFACTORY_SKIP_SERVICE  If 1, do not stop/start systemd (SteamCMD update only; run as steam or root).
-#   SATISFACTORY_NO_RESTART    If 1, after update do not start the unit even if it was stopped here.
+#   SATISFACTORY_NO_RESTART    If 1, after a successful update do not restart the unit (default is restart when root).
 #   SATISFACTORY_NETWORK_CHECK If 1, fail fast if Steam API is unreachable (optional).
 #   SATISFACTORY_HEALTH_CHECK  If 1 after restart, wait briefly for listening game port (optional).
 #   SATISFACTORY_UPDATE_LOG    Append structured log lines here (default: /var/log/satisfactory-update.log if writable)
@@ -58,6 +58,26 @@ log_line() {
 die() {
   log_line "ERROR" "$@"
   exit 1
+}
+
+# Read Steam appmanifest for debug (buildid / betakey). Paths relative to force_install_dir.
+read_manifest_field() {
+  local mf="$1" key="$2"
+  [[ -f "$mf" ]] || { echo ""; return 1; }
+  grep -m1 "\"${key}\"" "$mf" 2>/dev/null | sed -E "s/.*\"${key}\"[[:space:]]+\"([^\"]*)\".*/\\1/" | tr -d '\r' || echo ""
+}
+
+log_manifest_state() {
+  local phase="$1"
+  local mf="${INSTALL_DIR}/steamapps/appmanifest_${APP_ID}.acf"
+  if [[ ! -f "$mf" ]]; then
+    log_line "WARN" "${phase}: no appmanifest at ${mf} (cannot log Steam buildid)"
+    return 0
+  fi
+  local buildid betakey
+  buildid="$(read_manifest_field "$mf" "buildid")"
+  betakey="$(read_manifest_field "$mf" "betakey")"
+  log_line "INFO" "${phase} steam_app=${APP_ID} buildid=${buildid:-unknown} betakey=${betakey:-} (empty betakey = public branch)"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -123,11 +143,16 @@ elif [[ -f "/etc/systemd/system/${SERVICE_NAME}.service" ]] && grep -qE '[[:spac
   BETA_FLAG="-beta experimental"
 fi
 log_line "INFO" "steamcmd=${STEAMCMD:-<unset>} beta_flag=${BETA_FLAG:-<none>}"
+if [[ -n "$BETA_FLAG" ]]; then
+  log_line "INFO" "server Steam branch: Experimental — game client must use Satisfactory Experimental to match"
+else
+  log_line "INFO" "server Steam branch: public (stable) — game client must use the default non-Experimental branch to match"
+fi
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   [[ -d "$INSTALL_DIR" ]] || log_line "WARN" "dry-run: install directory missing: ${INSTALL_DIR}"
   [[ -f "${INSTALL_DIR}/${MARKER_REL}" ]] || log_line "WARN" "dry-run: marker ${MARKER_REL} missing under ${INSTALL_DIR}"
-  log_line "INFO" "dry-run: would optional network check; flock ${INSTALL_DIR}/.update-sf.lock; stop ${SERVICE_NAME} if active (as root); sudo -u ${STEAM_USER} steamcmd app_update ${APP_ID} validate; verify marker; start unit if this run stopped it"
+  log_line "INFO" "dry-run: would optional network check; flock ${INSTALL_DIR}/.update-sf.lock; stop ${SERVICE_NAME} if active (as root); log appmanifest buildid; sudo -u ${STEAM_USER} steamcmd app_update ${APP_ID} validate; log buildid again; systemctl restart ${SERVICE_NAME} on success (root)"
   exit 0
 fi
 
@@ -161,7 +186,11 @@ if ! flock -n 9; then
 fi
 log_line "INFO" "acquired lock ${LOCK_FILE}"
 
-STOPPED_BY_US=0
+SERVICE_WAS_ACTIVE=0
+if [[ "${SATISFACTORY_SKIP_SERVICE:-0}" != "1" ]] && [[ "${EUID:-$(id -u)}" -eq 0 ]] && systemctl is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
+  SERVICE_WAS_ACTIVE=1
+fi
+
 cleanup_restart() {
   local ec=$?
   if [[ "${SATISFACTORY_SKIP_SERVICE:-0}" == "1" ]]; then
@@ -169,13 +198,17 @@ cleanup_restart() {
     exit "$ec"
   fi
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    if [[ "$ec" -eq 0 ]]; then
+      log_line "WARN" "updated files on disk but not root: could not restart ${SERVICE_NAME}. If the game still says incompatible version, run: sudo systemctl restart ${SERVICE_NAME} (old process may still be running)."
+    fi
     flock -u 9 || true
     exit "$ec"
   fi
-  if [[ "$STOPPED_BY_US" -eq 1 && "${SATISFACTORY_NO_RESTART:-0}" != "1" && "$ec" -eq 0 ]]; then
-    log_line "INFO" "starting unit ${SERVICE_NAME}"
-    if ! systemctl start "${SERVICE_NAME}"; then
-      log_line "WARN" "systemctl start ${SERVICE_NAME} failed"
+  # Always restart on success so the running process reloads new binaries (covers was-active and was-inactive).
+  if [[ "$ec" -eq 0 && "${SATISFACTORY_NO_RESTART:-0}" != "1" ]]; then
+    log_line "INFO" "restarting ${SERVICE_NAME} so the server process matches updated files (was_active_before_update=${SERVICE_WAS_ACTIVE})"
+    if ! systemctl restart "${SERVICE_NAME}"; then
+      log_line "WARN" "systemctl restart ${SERVICE_NAME} failed"
     fi
     if [[ "${SATISFACTORY_HEALTH_CHECK:-0}" == "1" ]]; then
       sleep 3
@@ -195,18 +228,21 @@ cleanup_restart() {
 }
 trap cleanup_restart EXIT
 
-# Service lifecycle: only as root when not skipped.
+# Service lifecycle: only as root when not skipped — stop before touching files if the unit is running.
 if [[ "${SATISFACTORY_SKIP_SERVICE:-0}" != "1" ]] && [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-  if systemctl is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
-    log_line "INFO" "stopping ${SERVICE_NAME} for update"
+  if [[ "$SERVICE_WAS_ACTIVE" -eq 1 ]]; then
+    log_line "INFO" "stopping ${SERVICE_NAME} for safe file update"
     systemctl stop "${SERVICE_NAME}" || die "systemctl stop ${SERVICE_NAME} failed"
-    STOPPED_BY_US=1
   else
-    log_line "INFO" "unit ${SERVICE_NAME} not active; no stop needed"
+    log_line "INFO" "unit ${SERVICE_NAME} not active before update; files will update without a prior stop"
   fi
 elif [[ "${SATISFACTORY_SKIP_SERVICE:-0}" != "1" ]] && [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
-  log_line "WARN" "not root: cannot stop/start ${SERVICE_NAME}; ensure server is stopped before update or set SATISFACTORY_SKIP_SERVICE=1"
+  log_line "WARN" "not root: cannot stop/restart ${SERVICE_NAME}; use sudo for a full update or stop the server manually before running"
 fi
+
+STEAM_MANIFEST="${INSTALL_DIR}/steamapps/appmanifest_${APP_ID}.acf"
+PRE_BUILDID="$(read_manifest_field "$STEAM_MANIFEST" "buildid")"
+log_manifest_state "pre_steamcmd"
 
 log_line "INFO" "running SteamCMD app_update ${APP_ID} validate"
 # shellcheck disable=SC2086
@@ -219,5 +255,11 @@ if ! sudo -u "${STEAM_USER}" -- "$STEAMCMD" \
 fi
 
 [[ -f "$MARKER_PATH" ]] || die "post-update validation failed: missing ${MARKER_PATH}"
+
+POST_BUILDID="$(read_manifest_field "$STEAM_MANIFEST" "buildid")"
+log_manifest_state "post_steamcmd"
+if [[ -n "$PRE_BUILDID" && -n "$POST_BUILDID" && "$PRE_BUILDID" == "$POST_BUILDID" ]]; then
+  log_line "WARN" "buildid unchanged (${POST_BUILDID}): Steam may already be latest, or login/update failed silently. In-game incompatible version is very often stable vs Experimental mismatch — match Steam client branch to server (see beta_flag logs above)."
+fi
 
 log_line "INFO" "update complete install_dir=${INSTALL_DIR}"
