@@ -1,0 +1,10 @@
+name = "mycmd-bootstrap"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# Custom domain is attached in the Cloudflare dashboard (HUMAN).
+# routes = [{ pattern = "get.mycmd.site/*", zone_name = "mycmd.site" }]
+
+[vars]
+CATALOG_URL = "https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/main/catalog/recipes.json"
+INSTALL_ROOT_DEFAULT = "$HOME/mycmd"

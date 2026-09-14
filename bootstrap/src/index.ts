@@ -1,0 +1,243 @@
+export interface Env {
+  CATALOG_URL: string;
+  INSTALL_ROOT_DEFAULT: string;
+}
+
+interface CatalogVersion {
+  artifact: string;
+  url: string;
+  sha256: string;
+}
+
+interface CatalogRecipe {
+  channels?: Record<string, string>;
+  versions: Record<string, CatalogVersion>;
+}
+
+interface Catalog {
+  schema: number;
+  recipes: Record<string, CatalogRecipe>;
+}
+
+const PLACEHOLDER_SHA = /^(REPLACE_|PENDING|TODO|CHANGE_ME)/i;
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return text("method not allowed", 405);
+    }
+
+    const url = new URL(request.url);
+    if (url.pathname === "/" || url.pathname === "/health") {
+      return text("mycmd-bootstrap ok\n", 200);
+    }
+
+    const recipeId = parseRecipeId(url.pathname);
+    if (!recipeId) {
+      return text(
+        "usage: GET /<family>/<target>?channel=rc|stable or ?version=<semver>\n",
+        400,
+      );
+    }
+
+    let catalog: Catalog;
+    try {
+      catalog = await fetchCatalog(env.CATALOG_URL);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "catalog fetch failed";
+      return text(`catalog error: ${msg}\n`, 502);
+    }
+
+    const recipe = catalog.recipes[recipeId];
+    if (!recipe) {
+      return text(`unknown recipe: ${recipeId}\n`, 404);
+    }
+
+    const versionParam = url.searchParams.get("version");
+    const channelParam = url.searchParams.get("channel") ?? "rc";
+    const version = resolveVersion(recipe, versionParam, channelParam);
+    if (!version.ok) {
+      return text(`${version.error}\n`, version.status);
+    }
+
+    const entry = recipe.versions[version.value];
+    if (!entry) {
+      return text(`version not in catalog: ${version.value}\n`, 404);
+    }
+
+    if (!entry.sha256 || PLACEHOLDER_SHA.test(entry.sha256)) {
+      return text(
+        `catalog sha256 for ${recipeId}@${version.value} is not published yet\n`,
+        503,
+      );
+    }
+
+    if (!entry.url || !entry.artifact) {
+      return text(`catalog entry incomplete for ${recipeId}@${version.value}\n`, 503);
+    }
+
+    const installRoot = env.INSTALL_ROOT_DEFAULT || "$HOME/mycmd";
+    const script = buildInstaller({
+      recipeId,
+      version: version.value,
+      url: entry.url,
+      sha256: entry.sha256,
+      artifact: entry.artifact,
+      installRoot,
+    });
+
+    if (request.method === "HEAD") {
+      return new Response(null, {
+        status: 200,
+        headers: {
+          "content-type": "text/x-shellscript; charset=utf-8",
+          "cache-control": "no-store",
+        },
+      });
+    }
+
+    return new Response(script, {
+      status: 200,
+      headers: {
+        "content-type": "text/x-shellscript; charset=utf-8",
+        "cache-control": "no-store",
+        "x-mycmd-recipe": recipeId,
+        "x-mycmd-version": version.value,
+      },
+    });
+  },
+};
+
+function text(body: string, status: number): Response {
+  return new Response(body, {
+    status,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function parseRecipeId(pathname: string): string | null {
+  const parts = pathname.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  if (parts.length !== 2) return null;
+  const [family, target] = parts;
+  if (!family || !target) return null;
+  if (!/^[\w.-]+$/.test(family) || !/^[\w.-]+$/.test(target)) return null;
+  return `${family}/${target}`;
+}
+
+async function fetchCatalog(catalogUrl: string): Promise<Catalog> {
+  const res = await fetch(catalogUrl, {
+    headers: { accept: "application/json" },
+    cf: { cacheTtl: 60, cacheEverything: true },
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} from catalog`);
+  }
+  const data = (await res.json()) as Catalog;
+  if (!data?.recipes || typeof data.recipes !== "object") {
+    throw new Error("invalid catalog shape");
+  }
+  return data;
+}
+
+function resolveVersion(
+  recipe: CatalogRecipe,
+  versionParam: string | null,
+  channelParam: string,
+): { ok: true; value: string } | { ok: false; error: string; status: number } {
+  if (versionParam) {
+    if (!recipe.versions[versionParam]) {
+      return { ok: false, error: `unknown version: ${versionParam}`, status: 404 };
+    }
+    return { ok: true, value: versionParam };
+  }
+  const pinned = recipe.channels?.[channelParam];
+  if (!pinned) {
+    return {
+      ok: false,
+      error: `unknown or unset channel: ${channelParam}`,
+      status: 404,
+    };
+  }
+  return { ok: true, value: pinned };
+}
+
+function shellSingleQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildInstaller(args: {
+  recipeId: string;
+  version: string;
+  url: string;
+  sha256: string;
+  artifact: string;
+  installRoot: string;
+}): string {
+  const dest = `${args.installRoot}/${args.recipeId}`;
+  return `#!/usr/bin/env bash
+# mycmd bootstrap — generated by get.mycmd.site
+# recipe=${args.recipeId} version=${args.version}
+set -euo pipefail
+
+RECIPE_ID=${shellSingleQuote(args.recipeId)}
+VERSION=${shellSingleQuote(args.version)}
+ARTIFACT_URL=${shellSingleQuote(args.url)}
+ARTIFACT_SHA256=${shellSingleQuote(args.sha256)}
+ARTIFACT_NAME=${shellSingleQuote(args.artifact)}
+DEST=${shellSingleQuote(dest)}
+
+echo "mycmd: installing $RECIPE_ID@$VERSION"
+
+if ! command -v mise >/dev/null 2>&1; then
+  echo "mycmd: mise not found. Install: https://mise.jdx.dev/getting-started.html" >&2
+  exit 1
+fi
+if ! command -v curl >/dev/null 2>&1; then
+  echo "mycmd: curl is required" >&2
+  exit 1
+fi
+if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1; then
+  echo "mycmd: sha256sum or shasum is required" >&2
+  exit 1
+fi
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+ARCHIVE="$TMP/$ARTIFACT_NAME"
+
+echo "mycmd: downloading $ARTIFACT_URL"
+curl -fsSL "$ARTIFACT_URL" -o "$ARCHIVE"
+
+echo "mycmd: verifying sha256"
+if command -v sha256sum >/dev/null 2>&1; then
+  printf '%s  %s\\n' "$ARTIFACT_SHA256" "$ARCHIVE" | sha256sum -c -
+else
+  ACTUAL=$(shasum -a 256 "$ARCHIVE" | awk '{print $1}')
+  if [[ "$ACTUAL" != "$ARTIFACT_SHA256" ]]; then
+    echo "mycmd: sha256 mismatch" >&2
+    exit 1
+  fi
+fi
+
+mkdir -p "$DEST"
+tar -xzf "$ARCHIVE" -C "$DEST" --strip-components=1
+cd "$DEST"
+
+echo "mycmd: mise install"
+mise install
+
+if command -v just >/dev/null 2>&1 || mise which just >/dev/null 2>&1; then
+  echo "mycmd: just check"
+  mise exec -- just check
+else
+  echo "mycmd: just not available after mise install" >&2
+  exit 1
+fi
+
+echo "mycmd: done → $DEST"
+echo "mycmd: next: cd $DEST && just setup && just deploy"
+`;
+}

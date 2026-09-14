@@ -1,5 +1,2 @@
-# Force LF for scripts and docs (avoid Windows CRLF breakage)
+# Force LF for shell (Windows checkouts must not introduce CRLF)
 *.sh text eol=lf
-*.md text eol=lf
-*.yaml text eol=lf
-*.yml text eol=lf

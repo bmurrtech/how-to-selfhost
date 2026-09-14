@@ -1,48 +1,113 @@
-# Agent context: script security review
+# AGENTS.md
 
-This file provides **context for AI assistants and end users** who want to perform an unbiased, security-focused review of the **scripts** in this repository (under `scripts/`). Use it as a **system prompt** or instruction set when asking a third-party LLM to analyze those scripts. It is not intended for evaluating the written guides (in `guides/`), which are more subjective.
+Operating manual for coding agents in **how-to-selfhost**. Prefer the smallest coherent change, verify it, then report what ran.
 
----
-
-## Purpose
-
-- **Audience**: End users or engineers who want a second opinion on bash/shell scripts before running them (e.g. after `wget` from the repo).
-- **Scope**: Only **executable scripts** under `scripts/` (e.g. `*.sh`, and the behavior induced by `wg-cloud-init.yaml`). Do **not** evaluate markdown guides for “security” in a formal sense.
-- **Output**: Either (1) a **report in chat** with a short, professional analysis, or (2) a **file** at `analysis/001-script-security-report.md` (or similar) with the same content. Prefer a structured report: summary, list of findings (risk level + location + recommendation), and overall verdict (e.g. “no overt risks” / “review before use” / “do not run without changes”).
+This file does not replace guides, READMEs, or source. Domain glossary + mycmd distribution architecture: [`CONTEXT.md`](CONTEXT.md).
 
 ---
 
-## System prompt (copy into your AI assistant)
+## Project overview
 
-Use the following as the **system prompt** when asking an AI to review this repo’s scripts:
+Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for security hardening, game servers, WireGuard, GitHub/WSL auth, and local LLM recipes. Near-term product work is packaging/distributing recipe tarballs (first: `scripts/local-ai` → `0.0.1-rc1` via `get.mycmd.site`).
 
+---
+
+## Project map
+
+| Path | Role |
+|------|------|
+| `guides/` | Human how-to markdown |
+| `scripts/` | Executable scripts + per-folder READMEs — index: [`scripts/README.md`](scripts/README.md) |
+| `scripts/local-ai/` | First packageable recipe tree (mise + just) |
+| `docs/agents/` | Skill config: issue tracker, triage labels, domain-doc rules |
+| `docs/ADRs/` | ADRs via `/to-adr` (not Matt’s `docs/adr/`) |
+| `CONTEXT.md` | Glossary + distribution / bootstrap / catalog architecture |
+| `bootstrap/` | Cloudflare Worker (`get.mycmd.site`) + Wrangler |
+| `catalog/` | Git-controlled recipe → channel → version → artifact map |
+| `graft/` | Local Graft graph cache (gitignored; sparse until typed source lands) |
+| `pm/` | Local-only notes/PRDs (gitignored — never stage) |
+| `.github/workflows/` | Infra: deploy bootstrap Worker (Wrangler) |
+
+---
+
+## Development workflow
+
+```text
+orient (map + triggered nested AGENTS/README)
+→ edit the narrowest subtree
+→ targeted static check on changed files
+→ required broader validation for that subtree
+→ report paths changed + commands run (exit codes)
 ```
-You are a security-minded, unbiased reviewer of shell scripts. Your task is to analyze the executable scripts in the repository (under scripts/, e.g. .sh files and any behavior described or induced by cloud-init or config files) and produce a short, professional security report.
 
-Rules:
-- Be critical and assume zero trust: scripts may be run as root or with sudo; treat any network fetch, eval, or unsanitized user input as a potential risk until justified.
-- Look for: hardcoded secrets or credentials; unsafe use of eval or unquoted variables; path traversal or command injection; excessive permissions or world-writable paths; hidden or obfuscated behavior; use of curl | bash or wget | bash patterns that could be abused if the URL were compromised; missing input validation; and any action that could lock the user out (e.g. SSH/firewall changes without clear rollback or warning).
-- Do not assume the repository owner is trusted: evaluate the code as if it were from an unfamiliar third party.
-- Do not evaluate the markdown guides in guides/ for security; focus only on executable script behavior.
-- Output either (1) a structured report in chat, or (2) a markdown report suitable for saving as analysis/001-script-security-report.md. Include: a one-paragraph summary; a list of findings with risk level (Low/Medium/High/Critical), file:line or section, and a brief recommendation; and an overall verdict (e.g. “No overt malicious or high-risk patterns” / “Review before use” / “Do not run without addressing …”).
-- Be concise; avoid speculation. If something is unclear (e.g. script is intended to run in a restricted environment), note it as assumption/context.
+Do not invent a monorepo root build — there is no root `package.json`. Infra CI exists for the bootstrap Worker only (`.github/workflows/deploy-bootstrap.yml`).
+
+---
+
+## Setup & validation (repo-wide)
+
+Most trees are shell. For any edited `*.sh`:
+
+```bash
+bash -n path/to/script.sh
+shellcheck -x -e SC1091 path/to/script.sh
+shfmt -d -i 0 path/to/script.sh   # when shfmt is available (e.g. via mise in local-ai)
 ```
 
----
+**Before calling work complete on script changes:** every edited `.sh` passes `bash -n` + `shellcheck` (and `shfmt -d` when the tool is on PATH). Do not claim a check passed unless the command finished successfully.
 
-## How to use this file
-
-1. **With an AI assistant**: Paste the “System prompt” block above into the assistant’s system prompt or first user message, then provide the repo or the contents of `scripts/` (e.g. “Review the scripts in this repository using the instructions in AGENTS.md”).
-2. **Save a report**: Ask the assistant to write the report to `analysis/001-script-security-report.md` (create the `analysis/` directory if needed; it may be gitignored for local use).
-3. **Fast local checks**: Use **shellcheck** on each `.sh` file (e.g. `shellcheck scripts/security/f2b-install.sh`) for common bugs and bad practices; combine with the AI review for a fuller picture.
+Subtree-specific install/run loops live in nested docs (see **Further instructions**).
 
 ---
 
-## Repo layout (scripts only)
+## Code conventions
 
-- `scripts/security/` — f2b-install.sh, new-sudo-user.sh, vps-sec-harden.sh
-- `scripts/local-game-servers/` — satisfactory.sh, update-sf.sh, reset-admin-pw.sh, navmesh-patch.sh (satisfactory/), palworld.sh
-- `scripts/wireguard/` — wg-selhost.sh, wg-cloud-init.yaml
-- `scripts/github/` — gh-wsl2-auth-setup.sh
+- Prefer idempotent scripts; document destructive steps in the folder README.
+- Shell: `set -euo pipefail` unless an existing file intentionally differs.
+- Format/lint shell with `shfmt` + `shellcheck` only — do not hand-reformat.
+- Secrets and tokens only via env / `.env` (gitignored); never hardcode; never echo secrets or `--api-key` values into logs.
+- Use glossary terms from [`CONTEXT.md`](CONTEXT.md) when naming recipes, targets, artifacts, channels, or catalogs.
 
-Each subfolder has a README with a high-level overview of what each script does (to support your own or AI-assisted review).
+---
+
+## Git & PR workflow
+
+- Default branch: `main`. Issues: GitHub (`gh`) — [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+- Triage labels: [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+- Commit style in this repo: short conventional prefixes (`feat:`, `fix:`, `docs:`, …).
+- Commit / push / open a PR only when the user explicitly asks.
+- Never stage `pm/`, `.env`, `scripts/local-ai/.env`, `**/.runtime.env*`, `graft/`, `bootstrap/.dev.vars`, or `dist/`.
+
+Infra workflow: `.github/workflows/deploy-bootstrap.yml` (Wrangler). Recipe-release automation not required for first manual `0.0.1-rc1`.
+
+---
+
+## Boundaries
+
+| Do | Don't | Why |
+|----|-------|-----|
+| Load secrets from `.env` / env | Commit `.env` or print secrets | Credential exposure |
+| Keep `/pm/` local | `git add pm/` | Intentionally gitignored workspace |
+| Regenerate Graft with `graft build` | Commit `graft/` | Local cache; teammates rebuild |
+| Record decisions with `/to-adr` → `docs/ADRs/` | Create Matt-style `docs/adr/` | Repo ADR home is `docs/ADRs/` |
+| Package releases update catalog only | Change DNS/Worker on every recipe version | Distribution contract in `CONTEXT.md` |
+
+---
+
+## Agent skills (Matt Pocock setup)
+
+- **Issue tracker:** GitHub Issues — [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)
+- **Triage labels:** defaults — [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md)
+- **Domain docs:** single-context `CONTEXT.md` + `docs/ADRs/` — [`docs/agents/domain.md`](docs/agents/domain.md)
+
+---
+
+## Further instructions
+
+| When working on… | Read |
+|------------------|------|
+| **Local AI / Qwen Spark recipe** (serve, just recipes, PLE mmap, `.env`) | [`scripts/local-ai/AGENTS.md`](scripts/local-ai/AGENTS.md) then [`scripts/local-ai/README.md`](scripts/local-ai/README.md) |
+| **Packaging, bootstrap, catalog, `get.mycmd.site`, release channels** | [`CONTEXT.md`](CONTEXT.md) first |
+| **Any other `scripts/<area>/`** | That folder’s `README.md` (and nested READMEs) |
+| **Orientation via code graph** (when typed source exists) | `graft ask "…"`, `graft map`; rule: `.cursor/rules/graft.mdc` |
+| **Local design SoT (PRDs/status)** | `pm/notes/…` (gitignored; do not commit) |

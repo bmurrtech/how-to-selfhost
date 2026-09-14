@@ -4,32 +4,34 @@
 
 ## Top Guides
 
-|  | Status | Guide | About |
-|---|--------|--------|----------|
-| 🏠 | WIP | [ULTIMATE Proxmox Hypervisor](guides/how-to_ultimate_proxmox.md) | ZFS, cloud-init, Portainer, Plex, K3s, Ansible |
-| 🎮 | WIP | [ULTIMATE Self-Hosted Game Servers Hub](guides/how-to_game_servers.md) | [SteamCMD](guides/how-to_steamCMD.md), [Pterodactyl](guides/how-to_pterodactyl.md), [Minecraft/Crafty](guides/how-to_minecraft_multi_server.md); [scripts](scripts/local-game-servers/README.md) |
-| 📝 | WIP | [Ghost Blog (security-hardened)](guides/how-to_ghost_blog.md) | Docker/Portainer, DNS, firewall |
-| 🔒 | WIP | [Remotely Access via Cloudflare](guides/how-to_cloudflare.md) | Tunnels, SASE/Zero-trust, MFA, Authelia |
-| 🔥 | WIP | [PfSense NG-FW + VLANs](guides/how-to_pfsense.md) | VLANs, firewall, HAProxy |
-| 📦 | Incomplete | [S3 / MinIO Object Storage](guides/how-to_s3-minio.md) | Self-hosted S3, rclone, game save backups |
-| ⛏️ | WIP | [Flux Node on Proxmox](guides/how-to_flux_proxmox_node.md) | Flux node (links to pfSense) |
-| 🪙 | WIP | [Neoxa Mining VM](guides/how-to_neoxa_node.md) | Neoxa wallet, mining node |
-| ☁️ | WIP | [Google Cloud VM](guides/how-to-google-cloud-vm.md) | GCP free tier (partial) |
-
-**Status key**: **WIP** = in progress, substantive; **Incomplete** = skeleton or unfinished; **Other** = reference/meta.
+|  | Guide | About |
+|---|--------|----------|
+| 🏠 | [ULTIMATE Proxmox Hypervisor](guides/how-to_ultimate_proxmox.md) | ZFS, cloud-init, Portainer, Plex, K3s, Ansible |
+| 🎮 | [ULTIMATE Self-Hosted Game Servers Hub](guides/how-to_game_servers.md) | [SteamCMD](guides/how-to_steamCMD.md), [Pterodactyl](guides/how-to_pterodactyl.md), [Minecraft/Crafty](guides/how-to_minecraft_multi_server.md); [scripts](scripts/local-game-servers/README.md) |
+| 📝 | [Ghost Blog (security-hardened)](guides/how-to_ghost_blog.md) | Docker/Portainer, DNS, firewall |
+| 🔒 | [Remotely Access via Cloudflare](guides/how-to_cloudflare.md) | Tunnels, SASE/Zero-trust, MFA, Authelia |
+| 🔥 | [PfSense NG-FW + VLANs](guides/how-to_pfsense.md) | VLANs, firewall, HAProxy |
+| ⛏️ | [Flux Node on Proxmox](guides/how-to_flux_proxmox_node.md) | Flux node (links to pfSense) |
+| 🪙 | [Neoxa Mining VM](guides/how-to_neoxa_node.md) | Neoxa wallet, mining node |
+| ☁️ | [Google Cloud VM](guides/how-to-google-cloud-vm.md) | GCP free tier (partial) |
 
 ![self-hosted-infra](https://i.imgur.com/shQaQeR.png)
 
-Full glossary and cross-references: **[guides/README.md](guides/README.md)**.
+Full glossary of guides: **[guides/README.md](guides/README.md)**.
 
-## Scripts (by folder)
+## Scripts
 
-|  | Folder | What’s inside | README |
-|---|--------|----------------|--------|
-| 🎮 | [local-game-servers](scripts/local-game-servers/README.md) | SteamCMD, UFW, systemd, save import/export | [README](scripts/local-game-servers/README.md) |
-| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (`vps-sec-harden.sh`) | [README](scripts/security/README.md) |
-| 🎯 | [wireguard](scripts/wireguard/README.md) | WireGuard VPN — standalone script + cloud-init | [README](scripts/wireguard/README.md) |
-| 🔑 | [github](scripts/github/README.md) | Git/GitHub auth — WSL2 + `gh` OAuth in Windows browser | [README](scripts/github/README.md) |
+Runnable shell scripts for the boring host work: bring up a local LLM, stand a game server, harden SSH, spin WireGuard, fix GitHub auth on WSL. Each folder has a README with wget examples, what the script does, and what to watch for before you run it.
+
+Planned one-liner installer: `curl -fsSL https://get.mycmd.site/qwen3-8-flash-next/spark?channel=rc | sh` — Worker scaffold in [bootstrap/](bootstrap/), catalog in [catalog/](catalog/), architecture in [CONTEXT.md](CONTEXT.md).
+
+|  | Folder | What’s inside |
+|---|--------|----------------|
+| 🧠 | [local-ai](scripts/local-ai/README.md) | Qwen3.8 NVFP4 / vLLM on DGX Spark (mise + just); interim tar/scp until the installer ships |
+| 🎮 | [local-game-servers](scripts/local-game-servers/README.md) | SteamCMD game servers (Satisfactory, Palworld), UFW, systemd, save import/export |
+| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (`vps-sec-harden.sh`) |
+| 🎯 | [wireguard](scripts/wireguard/README.md) | WireGuard VPN — standalone script + cloud-init |
+| 🔑 | [github](scripts/github/README.md) | Git/GitHub auth — WSL2 + `gh` OAuth in Windows browser |
 
 Index and wget examples: **[scripts/README.md](scripts/README.md)**.
 
@@ -39,7 +41,6 @@ Nowadays, zero-trust mindset might be better, but to promote public trust:
 
 - Read each script before running it (especially when using `curl | bash` or `wget`).
 - Prefer downloading the raw file, reviewing it locally, then executing with appropriate privileges.
-- Optionally use **AGENTS.md** in this repo as a system prompt for an AI assistant to perform an unbiased, security-focused review of scripts and produce a short report (see [AGENTS.md](AGENTS.md)).
 
 ## Self-Hosting = Digital Freedom, For All
 
@@ -50,20 +51,24 @@ Nowadays, zero-trust mindset might be better, but to promote public trust:
 - **Security-built-in, not an afterthought** — Defaults harden SSH, block open ports, and recommend free enterprise solutions (like WireGuard, local-first setup, and role-based access).
 - **Help your fellow human** — By using, contributing to, or sharing these tools, you enable digital freedom for yourself and others.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)  
-This repository is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE).
+## Support open source
 
-### License Permissions & Restrictions
-*Keeping open-source open.*
-| Use Case                              | Permitted | Notes/Conditions                                                        |
-|----------------------------------------|-----------|-------------------------------------------------------------------------|
-| Private/internal use                   | ✔️        | No restrictions                                                         |
-| Modify for own private use             | ✔️        |                                                                        |
-| Share/distribute (unmodified)          | ✔️        | Must include AGPL license and source                                    |
-| Distribute with modifications          | ✔️        | Must release source code under AGPL-3.0                                 |
-| Provide as SaaS/network service        | ✔️        | Network users must get complete source                                  |
-| Keep modifications private             | ✔️        | Disclosure required only if distributed or served over network          |
-| Closed/proprietary forks               | ❌        | All distributed/network use requires full source disclosure             |
-| Restricting access to source code      | ❌        | Source must be public for users                                         |
-| Sub-licensing under restrictive terms  | ❌        | Must retain AGPL-3.0 copyleft                                           |
-| Hosted service without source sharing  | ❌        | Must provide source to all network users                                |
+If Alchemux saves you time, consider:
+
+- ⭐ **Starring the repo** — [![Star on GitHub](https://img.shields.io/badge/Star-on_GitHub-blue?logo=github)](https://github.com/bmurrtech/alchemux)
+- 🐛 **[Open a GitHub Issue](https://github.com/bmurrtech/alchemux/issues/new/choose)** — bugs, ideas, and feedback
+- 📣 **Sharing** with others who download or archive media from the terminal
+- ☕ **[Buy Me a Coffee](https://www.buymeacoffee.com/bmurrtech)** or **[Ko-fi](https://ko-fi.com/bmurrtech)**
+
+<p align="center">
+  <a href="https://www.buymeacoffee.com/bmurrtech" target="_blank" rel="noopener">
+    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20project-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee">
+  </a>
+  <a href="https://ko-fi.com/bmurrtech" target="_blank" rel="noopener">
+    <img src="https://img.shields.io/badge/Ko--fi-Support%20the%20project-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-fi">
+  </a>
+</p>
+
+## License
+
+This repository is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE). Permissions, restrictions, commercial licensing, and disclaimer: **[docs/LICENSE.md](docs/LICENSE.md)**.

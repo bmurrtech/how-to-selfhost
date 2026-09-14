@@ -10,6 +10,8 @@ Scripts and configs used by the how-to guides. Organized by purpose.
 | [local-game-servers/](local-game-servers/) | SteamCMD-based game servers: Satisfactory, Palworld. UFW + systemd, tuned for local home or VPS. |
 | [wireguard/](wireguard/) | WireGuard VPN server: standalone script and cloud-init user-data. |
 | [github/](github/) | Git/GitHub auth: WSL2 + `gh` browser setup so OAuth opens in Windows default browser. |
+| [local-ai/](local-ai/) | Qwen3.8 NVFP4 / vLLM on DGX Spark (PLE mmap, mise + just). Interim: tar/scp `scripts/local-ai`; see folder README. |
+| [packaging/](packaging/) | Build recipe release tarballs + sha256 for `get.mycmd.site` (`package-recipe.sh`). |
 
 ## Downloading scripts (wget)
 
@@ -27,4 +29,4 @@ chmod +x f2b-install.sh
 sudo ./f2b-install.sh
 ```
 
-Each subfolder has a **README.md** with: **why to use** the scripts, a **high-level overview** of what each script does (to support zero-trust review), wget examples, and safety notes. See also the root [README](../README.md) for zero-trust mindset and validation tips (e.g. shellcheck, [AGENTS.md](../AGENTS.md) for AI-assisted script review).
+Each subfolder has a **README.md** with: **why to use** the scripts, a **high-level overview** of what each script does (to support zero-trust review), wget examples, and safety notes. See also the root [README](../README.md) for zero-trust mindset and validation tips (e.g. shellcheck); [AGENTS.md](../AGENTS.md) for the repo operating manual.
