@@ -1,0 +1,34 @@
+# Thin operator UX for scripts/local-ai (ADR-009: logic lives in scripts).
+# Default recipe: qwen3-8-flash-next / spark
+
+set dotenv-load := false
+
+RECIPE := "recipes/qwen3-8-flash-next/spark"
+export COMPOSE_PROJECT_NAME := "qwen38-spark"
+
+default:
+	@just --list
+
+check:
+	bash {{RECIPE}}/scripts/check.sh
+
+setup:
+	bash {{RECIPE}}/scripts/setup.sh
+
+deploy:
+	bash {{RECIPE}}/scripts/deploy.sh
+
+status:
+	bash {{RECIPE}}/scripts/status.sh
+
+logs *ARGS:
+	bash {{RECIPE}}/scripts/logs.sh {{ARGS}}
+
+benchmark *ARGS:
+	bash {{RECIPE}}/scripts/benchmark.sh {{ARGS}}
+
+stop:
+	bash {{RECIPE}}/scripts/stop.sh
+
+config:
+	bash {{RECIPE}}/scripts/config.sh

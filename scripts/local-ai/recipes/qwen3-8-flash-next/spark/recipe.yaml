@@ -1,0 +1,24 @@
+schema: 1
+
+recipe:
+  name: qwen3-8-flash-next/spark
+  version: 0.1.0
+
+model:
+  id: nvidia/Qwen3.8-Flash-Next-NVFP4
+  family: qwen3-8-flash-next
+
+hardware:
+  host: spark
+  topology: single
+
+runtime:
+  engine: vllm
+  mode: container
+  image: qwen38-flash-dgx:c578815
+  source: https://github.com/blazux/qwen3.8-Flash-DGX
+  ref: c57881509af3dad83a28e59662fe3c4d29381628
+
+deployment:
+  strategy: ple-mmap
+  served_model_name: qwen3.8-flash-next

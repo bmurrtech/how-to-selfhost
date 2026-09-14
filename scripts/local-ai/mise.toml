@@ -1,0 +1,9 @@
+[settings]
+lockfile = true
+
+[tools]
+just = "1.40.0"
+jq = "1.7.1"
+yq = "4.44.3"
+shellcheck = "0.10.0"
+shfmt = "3.10.0"

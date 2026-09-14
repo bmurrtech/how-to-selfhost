@@ -1,6 +1,9 @@
 name = "mycmd-bootstrap"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
+# Production public endpoint is Custom Domain get.mycmd.site (Gate A).
+# Keep workers.dev off so deploys do not re-advertise the preview hostname.
+workers_dev = false
 
 # Custom domain is attached in the Cloudflare dashboard (HUMAN).
 # routes = [{ pattern = "get.mycmd.site/*", zone_name = "mycmd.site" }]
