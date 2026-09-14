@@ -9,7 +9,7 @@
         "0.0.1-rc1": {
           "artifact": "qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz",
           "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.0.1-rc1/qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz",
-          "sha256": "REPLACE_AFTER_FIRST_RELEASE"
+          "sha256": "7f0180b74186fdc2bb4d52463ed2f3d5ac29921aaf71652da45c4b54bb3b4e27"
         }
       }
     }
