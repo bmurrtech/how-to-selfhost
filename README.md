@@ -23,39 +23,24 @@ Full glossary of guides: **[guides/README.md](guides/README.md)**.
 
 Runnable shell scripts for the boring host work: bring up a local LLM, stand a game server, harden SSH, spin WireGuard, fix GitHub auth on WSL. Each folder has a README with wget examples, what the script does, and what to watch for before you run it.
 
-### Local AI quick start (DGX Spark)
-
-Public installer (release candidate channel — **no stable yet**):
+### Local AI / security installers (`get.mycmd.site`)
 
 ```bash
-# Prefer: fetch first, review, then run
-curl -fsSL "https://get.mycmd.site/qwen3-8-flash-next/spark?channel=rc" -o mycmd-install.sh
-less mycmd-install.sh
-bash mycmd-install.sh
+# Qwen (Spark or RTX PRO 6000) — @beta → catalog rc → 0.0.1-rc2
+curl -fsSL "https://get.mycmd.site/qwen3-8-flash-next/spark@beta" | sh
+curl -fsSL "https://get.mycmd.site/qwen3-8-flash-next/rtx-6000-pro@beta" | sh
 
-# Or one-liner (trust-but-verify):
-curl -fsSL "https://get.mycmd.site/qwen3-8-flash-next/spark?channel=rc" | sh
+# VPS security baseline (separate product)
+curl -fsSL "https://get.mycmd.site/security/vps-baseline@beta" | sh
 ```
 
-What it does: resolve catalog `rc` → download GitHub Release `v0.0.1-rc1` → SHA-256 verify → extract → `mise install` → `just check`.
-
-Then on the host:
-
-```bash
-cd ~/mycmd/qwen3-8-flash-next/spark   # default install root; see installer output
-cp .env.example .env && chmod 600 .env   # set VLLM_API_KEY / HF_TOKEN
-just setup
-just deploy
-just status
-```
-
-Architecture: [CONTEXT.md](CONTEXT.md) · Worker: [bootstrap/](bootstrap/) · Catalog: [catalog/](catalog/) · Recipe ops: [scripts/local-ai/README.md](scripts/local-ai/README.md)
+Ops: [scripts/local-ai/README.md](scripts/local-ai/README.md) · [scripts/security/README.md](scripts/security/README.md) · Architecture: [CONTEXT.md](CONTEXT.md)
 
 |  | Folder | What’s inside |
 |---|--------|----------------|
-| 🧠 | [local-ai](scripts/local-ai/README.md) | Qwen3.8 NVFP4 / vLLM on DGX Spark (mise + just); install via `get.mycmd.site` above |
+| 🧠 | [local-ai](scripts/local-ai/README.md) | Qwen3.8 NVFP4 / vLLM on Spark + RTX PRO 6000 (mise + just) |
 | 🎮 | [local-game-servers](scripts/local-game-servers/README.md) | SteamCMD game servers (Satisfactory, Palworld), UFW, systemd, save import/export |
-| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (`vps-sec-harden.sh`) |
+| 🛡️ | [security](scripts/security/README.md) | Fail2ban, new sudo user, SSH hardening (`vps-baseline`) |
 | 🎯 | [wireguard](scripts/wireguard/README.md) | WireGuard VPN — standalone script + cloud-init |
 | 🔑 | [github](scripts/github/README.md) | Git/GitHub auth — WSL2 + `gh` OAuth in Windows browser |
 

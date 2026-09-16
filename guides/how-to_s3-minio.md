@@ -61,4 +61,4 @@ The script [palworld-save-export.sh](../scripts/local-game-servers/palworld-save
 ## See also
 
 - [Local game servers (Palworld, Satisfactory)](../scripts/local-game-servers/README.md) — World save management, SCP/SFTP, import/export scripts.
-- [AGENTS.md](../AGENTS.md) — For security review of scripts before use.
+- [AGENTS.md](../AGENTS.md) — Repo operating manual for agents working in this repository.

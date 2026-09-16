@@ -13,6 +13,7 @@ Do **not** duplicate subtree runbooks here — follow the pointers below.
 | Repo operating manual (map, validation, Git, boundaries) | [`AGENTS.md`](AGENTS.md) |
 | Local AI / Qwen Spark recipe ops | [`scripts/local-ai/AGENTS.md`](scripts/local-ai/AGENTS.md) |
 | Local AI human quickstart | [`scripts/local-ai/README.md`](scripts/local-ai/README.md) |
+| Security VPS baseline quickstart | [`scripts/security/README.md`](scripts/security/README.md) |
 | Scripts index | [`scripts/README.md`](scripts/README.md) |
 | Issue tracker / triage / domain-doc rules | [`docs/agents/`](docs/agents/) |
 | ADRs | `docs/ADRs/` via `/to-adr` — **not** Matt’s `docs/adr/` |
@@ -28,13 +29,13 @@ Other `scripts/*/README.md` files are the human SoT for that subtree.
 | Term | Meaning | Avoid |
 |------|---------|--------|
 | **Recipe family** | Model/workload identity, e.g. `qwen3-8-flash-next` | Calling this a “package name” alone |
-| **Target** | Hardware/topology, e.g. `spark`, `spark-dual`, `rtx-6000-pro` | Equating target with recipe family |
+| **Target** | Hardware slug, e.g. `spark`, `rtx-6000-pro` (1–8 GPUs, one node; bare-metal or in-container via coarse `EXEC_MODE`). Future: `…-multi-node` for true multi-host — **out of scope**. | Equating target with recipe family; third URL path segment; per-provider target forks |
 | **Recipe ID** | `<family>/<target>`, e.g. `qwen3-8-flash-next/spark` | Embedding version in the ID |
 | **Release version** | Semver / prerelease for one recipe artifact, e.g. `0.0.1-rc1` | Repo-wide “latest” as the long-term resolver |
-| **Channel** | `stable` \| `rc` \| explicit `version=` | Treating newest GitHub release as always stable |
-| **Artifact** | Deterministic tarball + checksum, e.g. `qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz` | Hand-zipped dirs; weights/secrets inside |
+| **Channel** | `stable` \| `beta` \| `rc` \| `nightly` (mutable → immutable version). `beta` ↔ `rc` aliases in the Worker | Treating newest GitHub release as always stable |
+| **Artifact** | Deterministic tarball + checksum, e.g. `qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz` (≤2 GiB on GitHub Releases; larger → R2) | Hand-zipped dirs; weights/secrets inside |
 | **Catalog** | Git-controlled manifest: recipe → channel → version → artifact URL/sha256 | Hardcoding GitHub URLs in the Worker |
-| **Bootstrap** | Installer behind `get.mycmd.site/<family>/<target>`: resolve → download → verify → extract → mise → hand off to recipe | Embedding vLLM/GPU/PLE logic |
+| **Bootstrap** | Installer behind `get.mycmd.site/<project>/<recipe>[@channel\|version]`: resolve → download → verify → extract → mise → hand off to recipe | Embedding vLLM/GPU/PLE logic |
 | **Recipe** | Independently packageable tree: `mise.toml`, `Justfile`, scripts, config, compose | Depending on unvendored `../../../shared.sh` |
 | **Mise** | Pinned CLI tools (`python`, `uv`, `just`, …) via `mise install` | Machine provisioning / Docker / NVIDIA |
 | **Just** | Human lifecycle commands | Fat logic in the Justfile (keep thin; scripts own logic) |
@@ -44,14 +45,18 @@ Other `scripts/*/README.md` files are the human SoT for that subtree.
 
 ## Current milestone
 
-**First E2E proof:** `qwen3-8-flash-next/spark` → GitHub Release **`0.0.1-rc1`** → `get.mycmd.site` → clean Spark install.
+**Channel `rc` / public `@beta`:** `0.0.1-rc2` for Qwen local-ai targets (immutable GitHub Release tag `v0.0.1-rc2`). Prior spark `0.0.1-rc1` remains available by pin.
 
-| Contract | Value |
-|----------|--------|
-| Recipe ID | `qwen3-8-flash-next/spark` |
-| Public URL | `https://get.mycmd.site/qwen3-8-flash-next/spark` |
-| First artifact | `qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz` (+ `.sha256`) |
-| Source today | `scripts/local-ai/recipes/qwen3-8-flash-next/spark/` — details in [`scripts/local-ai/AGENTS.md`](scripts/local-ai/AGENTS.md) |
+| Recipe ID | Artifact (rc2) |
+|-----------|----------------|
+| `qwen3-8-flash-next/spark` | `qwen3-8-flash-next-spark-0.0.1-rc2.tar.gz` |
+| `qwen3-8-flash-next/rtx-6000-pro` | `qwen3-8-flash-next-rtx-6000-pro-0.0.1-rc2.tar.gz` |
+
+Public URLs: `https://get.mycmd.site/<recipe-id>@beta` → catalog `rc` → above versions. Source trees under [`scripts/local-ai/recipes/qwen3-8-flash-next/`](scripts/local-ai/recipes/qwen3-8-flash-next/). Ops: [`scripts/local-ai/README.md`](scripts/local-ai/README.md).
+
+**Topology note:** `rtx-6000-pro` covers **single-node** 1–8 GPUs with coarse `docker` vs `native` execution (upstream `vllm/vllm-openai:qwen38-flash-next` — no project Docker Hub image). A future **`multi-node`** target is reserved; not shipped.
+
+**Also packaged (separate):** `security/vps-baseline` → `security-vps-baseline-0.0.1-rc1.tar.gz` (sha256 in catalog; release tag `security-vps-baseline-v0.0.1-rc1`). Source: [`scripts/security/`](scripts/security/).
 
 Keep **recipe ID**, **release version**, and **storage location** separate so the public URL survives a later move off GitHub Releases.
 
@@ -61,9 +66,9 @@ Keep **recipe ID**, **release version**, and **storage location** separate so th
 
 ```text
 mise install
-just check | setup | deploy | status | logs | benchmark | stop
+just config | doctor | setup | deploy | probe | status | logs | benchmark | stop | token
+# triage: just benchmark-load | gpu | snapshot | config --show
 ```
-
 - **Mise:** tool versions. **Recipe:** host/GPU/Docker/model/compose/deploy/health/bench.
 - Archive self-contained except weights + system packages.
 - **Exclude:** weights, `.env`, credentials, logs, bench results, cache, temp, machine-local config.
@@ -80,11 +85,19 @@ get.mycmd.site  →  mycmd-bootstrap Worker  →  catalog (git)  →  GitHub Rel
 
 ### Public API
 
-- Stable: `https://get.mycmd.site/<family>/<target>`
-- RC: `...?channel=rc` (or installer args)
-- Pin: `...?version=0.0.1-rc1`
+```text
+/<project>/<recipe>
+/<project>/<recipe>@stable
+/<project>/<recipe>@beta
+/<project>/<recipe>@nightly
+/<project>/<recipe>@<immutable-version>
+```
 
-Resolver: **git-controlled catalog** (not long-term `releases/latest` — monorepo has independently versioned recipes).
+- Prefer path `@channel` / `@version`. Today: `@beta` (aliases catalog `rc` → current rc version per recipe); no `stable` yet.
+- Legacy query still works: `?channel=rc|beta|stable`, `?version=<semver>`.
+- Unqualified path defaults to channel `rc` (same alias set as `beta`).
+
+Resolver: **git-controlled catalog** (not long-term `releases/latest` — monorepo has independently versioned recipes). Generic playbook: [`guides/how-to_distro_cloudflare_github.md`](guides/how-to_distro_cloudflare_github.md).
 
 ### Two pipelines
 
@@ -116,7 +129,7 @@ No Qwen/vLLM/PLE logic in bootstrap.
 
 Freeze contract → build recipe locally → prove from git clone → deterministic archive (`scripts/packaging/package-recipe.sh`) → **manual** `0.0.1-rc1` release → catalog sha256 → Cloudflare Worker + `get.mycmd.site` (Actions + **HUMAN** secrets) → clean-machine curl E2E → automate recipe-release Actions → later targets / `uvx` bench / other backends.
 
-**Key milestone:** clean Spark `curl -fsSL https://get.mycmd.site/qwen3-8-flash-next/spark?channel=rc | sh` → verified recipe + `just check`. Prove recipe deploy (A) before distribution (B).
+**Key milestone:** clean host `curl -fsSL https://get.mycmd.site/qwen3-8-flash-next/<spark|rtx-6000-pro>@beta | sh` → `just doctor` → (on GPU host) `just setup` / `deploy` / `probe`. Prove recipe deploy (A) before distribution (B).
 
 **Scaffold paths:** `bootstrap/` (Worker), `catalog/recipes.json`, `.github/workflows/deploy-bootstrap.yml`. Maintainer CF wizard (local): `pm/qwen-self-host/distro/`. ADR: `docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md`.
 

@@ -62,7 +62,7 @@ We need a public one-liner installer (`get.mycmd.site/<family>/<target>`) for in
 ## Implementation Notes (Normative)
 
 ### Architecture / Boundaries
-- **Public API:** `https://get.mycmd.site/<family>/<target>` with `?channel=rc|stable` or `?version=<semver>`
+- **Public API:** `https://get.mycmd.site/<project>/<recipe>[@stable|beta|nightly|rc|<version>]`; legacy `?channel=` / `?version=` still accepted. `beta` ↔ `rc` channel aliases.
 - **Bootstrap Worker** (`bootstrap/`): resolve → emit installer shell. No recipe runtime logic.
 - **Catalog** (`catalog/recipes.json`): recipe ID → channels → version → artifact URL + sha256
 - **Artifacts:** GitHub Release assets named `<family>-<target>-<version>.tar.gz` (+ `.sha256`)

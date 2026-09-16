@@ -1,6 +1,60 @@
-# Security scripts
+# Security scripts — VPS / LAN baseline (mise + just)
 
-Scripts for user management, SSH hardening, and Fail2ban. Intended for **home LAN** or **VPS** use; read each script’s notes for lockout risk (e.g. SSH/AllowUsers, Fail2ban whitelist).
+Idempotent sudo-user, SSH/UFW harden, and Fail2ban recipes for **home LAN** or **VPS**. Prefer the curl → mise → just path; raw wget of archived scripts remains available below.
+
+## Install on a host
+
+```bash
+# Prefer: fetch, review, then run
+curl -fsSL "https://get.mycmd.site/security/vps-baseline@beta" -o mycmd-install.sh
+less mycmd-install.sh
+bash mycmd-install.sh
+
+# One-liner:
+curl -fsSL "https://get.mycmd.site/security/vps-baseline@beta" | sh
+```
+
+`@beta` aliases catalog channel `rc` → GitHub Release **security-vps-baseline-v0.0.1-rc1** (no `stable` yet). `@rc` and legacy `?channel=rc` still work. Pin: `@0.0.1-rc1` or `?version=0.0.1-rc1`. Until the Release ships and catalog `sha256` leaves `PENDING_RELEASE`, the Worker returns 503 — use `archive/` wget or a local clone. Architecture: root [`CONTEXT.md`](../../CONTEXT.md). URL contract: [`guides/how-to_distro_cloudflare_github.md`](../../guides/how-to_distro_cloudflare_github.md) (lines 31–45).
+
+```text
+curl | sh
+    |
+    v
+get.mycmd.site /security/vps-baseline@beta
+    |
+    v
+mycmd-bootstrap Worker  →  catalog  →  immutable version
+    |
+    v
+installer script (shell)
+    |
+    +-- download GitHub Release tarball
+    +-- sha256 verify
+    +-- extract → ~/mycmd/security/vps-baseline
+    +-- mise install → just check
+```
+
+## After install
+
+```bash
+cd ~/mycmd/security/vps-baseline   # default; installer prints the path
+mise install
+just check
+```
+
+| Command | What it does |
+| --- | --- |
+| `just check` | Preflight: scripts + mise tools present (no host mutation) |
+| `just doctor` / `just status` | Read-only probe of sshd / UFW / fail2ban |
+| `just user` | Interactive sudo user + pubkey paste (`new-sudo-user.sh`; needs sudo) |
+| `just harden` | SSH/UFW/sysctl/unattended-upgrades baseline (`vps-sec-harden.sh`) |
+| `just f2b -- --whitelist 203.0.113.7` | Fail2ban + whitelist flags (`f2b-install.sh`; pass flags after `--`) |
+
+Fresh VPS order: key login works → optional `just user` → `just harden` (keep a **second** SSH session) → `just f2b` → `just doctor`.
+
+This bundle keeps **full VPS** harden behavior (includes `apt upgrade -y`, disables IPv6). A scoped GPU-workstation harden for local-ai metal is a separate track.
+
+---
 
 ## Why use these
 
@@ -25,8 +79,8 @@ Scripts for user management, SSH hardening, and Fail2ban. Intended for **home LA
 ## Recommended order (fresh VPS)
 
 1. Log in as the provider’s default user (or serial/console) and install your **public** key in that user’s `~/.ssh/authorized_keys` (see **Vault-managed SSH keys** below).
-2. **Optional:** Run **`new-sudo-user.sh`** as root if you need an extra sudo account **before** full hardening. Prefer **AllowUsers? (y/N)** → **N** so behavior stays aligned with **`vps-sec-harden.sh`** (no enforced user list). Use **y** only when you intentionally want `AllowUsers admin newuser` and you name the real admin (e.g. `ubuntu`), not `root`, if root login is disabled later.
-3. Run **`vps-sec-harden.sh`** as the sudo user you will actually use day to day, after key login works from a **second** SSH session.
+2. **Optional:** Run **`just user`** / **`new-sudo-user.sh`** as root if you need an extra sudo account **before** full hardening. Prefer **AllowUsers? (y/N)** → **N** so behavior stays aligned with **`vps-sec-harden.sh`** (no enforced user list). Use **y** only when you intentionally want `AllowUsers admin newuser` and you name the real admin (e.g. `ubuntu`), not `root`, if root login is disabled later.
+3. Run **`just harden`** / **`vps-sec-harden.sh`** as the sudo user you will actually use day to day, after key login works from a **second** SSH session.
 
 ## Vault-managed SSH keys (e.g. Bitwarden)
 
@@ -269,21 +323,21 @@ If **`ssh`** reports an unknown option, remove the line or check **`man ssh_conf
 - **Fail2ban (`f2b-install.sh`)**: By default whitelists loopback and RFC1918. On a cloud VM, add your public IP with `--whitelist` so you don’t ban yourself.
 - **New sudo user (`new-sudo-user.sh`)**: **AllowUsers** optional (default **N** for that prompt). Run via **`sudo`** when using restricted `AllowUsers`. Public keys via paste only. **Recreate** options **[1]/[2]** appear only when passwd home is **`/home/<username>`**; **[2]** is destructive (no backup). Uses console if **`userdel`** could fail. Failed restore from **[1]** leaves backup paths in the log.
 
-## How to download (wget)
+## How to download (wget) — archived standalone scripts
 
-From a Linux host (e.g. SSH or Proxmox console), use the raw URL for this repo (replace `main` with your branch if different):
+For one-off hosts without mise/just, pull the **archived** copies (same behavior as the live scripts this recipe wraps). Prefer `get.mycmd.site` above when you can. Replace `main` with your branch if different:
 
 ```bash
 # Fail2ban installer
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/f2b-install.sh -O f2b-install.sh
+wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/archive/f2b-install.sh -O f2b-install.sh
 chmod +x f2b-install.sh
 
 # New sudo user
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/new-sudo-user.sh -O new-sudo-user.sh
+wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/archive/new-sudo-user.sh -O new-sudo-user.sh
 chmod +x new-sudo-user.sh
 
 # VPS SSH/system hardening (unattended-upgrades, UFW, etc.)
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/vps-sec-harden.sh -O vps-sec-harden.sh
+wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/archive/vps-sec-harden.sh -O vps-sec-harden.sh
 chmod +x vps-sec-harden.sh
 ```
 
@@ -304,9 +358,11 @@ Lightweight Fail2ban setup with CLI whitelist flags. By default:
 ```bash
 # Default (home / on-prem)
 sudo ./f2b-install.sh
+# or: just f2b
 
 # Cloud VM — whitelist your public IP for SSH
 sudo ./f2b-install.sh --whitelist "203.0.113.7"
+# or: just f2b -- --whitelist "203.0.113.7"
 
 # Multiple IPs or from file
 sudo ./f2b-install.sh --whitelist-file /root/allow.txt

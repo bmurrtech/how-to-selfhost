@@ -1,9 +1,9 @@
 # mycmd bootstrap Worker
 
-Cloudflare Worker behind `https://get.mycmd.site/<family>/<target>`.
-Resolves versions from the git catalog and returns a shell installer.
+Cloudflare Worker behind `https://get.mycmd.site/<project>/<recipe>[@channel|version]`.
+Resolves versions from the git catalog and returns a shell installer (client downloads the artifact; Worker does not proxy tarball bytes).
 
-Architecture: [`CONTEXT.md`](../CONTEXT.md), ADR [`docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md`](../docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md).
+Architecture: [`CONTEXT.md`](../CONTEXT.md), ADR [`docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md`](../docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md), generic playbook [`guides/how-to_distro_cloudflare_github.md`](../guides/how-to_distro_cloudflare_github.md).
 
 ## Local
 
@@ -28,6 +28,13 @@ Maintainer Cloudflare wizard (local only): `pm/qwen-self-host/distro/configure-c
 
 ## Public contract
 
-- `GET /qwen3-8-flash-next/spark` → installer (default channel from catalog; use `?channel=rc`)
-- `GET /qwen3-8-flash-next/spark?version=0.0.1-rc1` → pin
+```text
+GET /<project>/<recipe>
+GET /<project>/<recipe>@stable|beta|nightly|rc|<version>
+```
+
+- `GET /qwen3-8-flash-next/spark@beta` → installer (`beta` ↔ catalog `rc` → `0.0.1-rc1`)
+- `GET /qwen3-8-flash-next/spark@0.0.1-rc1` → pin
+- Legacy: `?channel=rc`, `?version=0.0.1-rc1`
+- Unqualified path defaults to channel `rc`
 - Errors → plain text, non-shell

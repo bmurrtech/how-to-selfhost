@@ -32,10 +32,10 @@ export default {
       return text("mycmd-bootstrap ok\n", 200);
     }
 
-    const recipeId = parseRecipeId(url.pathname);
-    if (!recipeId) {
+    const parsed = parseInstallPath(url.pathname);
+    if (!parsed) {
       return text(
-        "usage: GET /<family>/<target>?channel=rc|stable or ?version=<semver>\n",
+        "usage: GET /<project>/<recipe>[@stable|beta|nightly|rc|<version>] (also ?channel= / ?version=)\n",
         400,
       );
     }
@@ -48,14 +48,19 @@ export default {
       return text(`catalog error: ${msg}\n`, 502);
     }
 
+    const { recipeId } = parsed;
     const recipe = catalog.recipes[recipeId];
     if (!recipe) {
       return text(`unknown recipe: ${recipeId}\n`, 404);
     }
 
     const versionParam = url.searchParams.get("version");
-    const channelParam = url.searchParams.get("channel") ?? "rc";
-    const version = resolveVersion(recipe, versionParam, channelParam);
+    const channelParam = url.searchParams.get("channel");
+    const version = resolveVersion(recipe, {
+      versionParam,
+      pathRef: parsed.pathRef,
+      channelParam,
+    });
     if (!version.ok) {
       return text(`${version.error}\n`, version.status);
     }
@@ -118,13 +123,30 @@ function text(body: string, status: number): Response {
   });
 }
 
-function parseRecipeId(pathname: string): string | null {
+/** Path grammar: /<project>/<recipe>[@<channel|version>] */
+function parseInstallPath(
+  pathname: string,
+): { recipeId: string; pathRef: string | null } | null {
   const parts = pathname.replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
   if (parts.length !== 2) return null;
-  const [family, target] = parts;
-  if (!family || !target) return null;
-  if (!/^[\w.-]+$/.test(family) || !/^[\w.-]+$/.test(target)) return null;
-  return `${family}/${target}`;
+  const [project, recipeAndRef] = parts;
+  if (!project || !recipeAndRef) return null;
+  if (!/^[\w.-]+$/.test(project)) return null;
+
+  const at = recipeAndRef.indexOf("@");
+  let recipe: string;
+  let pathRef: string | null = null;
+  if (at === -1) {
+    recipe = recipeAndRef;
+  } else if (at === 0) {
+    return null;
+  } else {
+    recipe = recipeAndRef.slice(0, at);
+    pathRef = recipeAndRef.slice(at + 1);
+    if (!pathRef || !/^[\w.+\-]+$/.test(pathRef)) return null;
+  }
+  if (!/^[\w.-]+$/.test(recipe)) return null;
+  return { recipeId: `${project}/${recipe}`, pathRef };
 }
 
 async function fetchCatalog(catalogUrl: string): Promise<Catalog> {
@@ -142,22 +164,67 @@ async function fetchCatalog(catalogUrl: string): Promise<Catalog> {
   return data;
 }
 
+/** rc and beta are aliases of each other for channel lookup. */
+function channelLookupNames(channel: string): string[] {
+  if (channel === "rc" || channel === "beta") {
+    return channel === "beta" ? ["beta", "rc"] : ["rc", "beta"];
+  }
+  return [channel];
+}
+
+function resolveChannel(
+  recipe: CatalogRecipe,
+  channel: string,
+): string | null {
+  for (const name of channelLookupNames(channel)) {
+    const pinned = recipe.channels?.[name];
+    if (pinned) return pinned;
+  }
+  return null;
+}
+
+/**
+ * Priority: ?version= → path @ref (channel then version) → ?channel= → default rc.
+ * Path @ref tries channel aliases first, then immutable versions.
+ */
 function resolveVersion(
   recipe: CatalogRecipe,
-  versionParam: string | null,
-  channelParam: string,
+  args: {
+    versionParam: string | null;
+    pathRef: string | null;
+    channelParam: string | null;
+  },
 ): { ok: true; value: string } | { ok: false; error: string; status: number } {
-  if (versionParam) {
-    if (!recipe.versions[versionParam]) {
-      return { ok: false, error: `unknown version: ${versionParam}`, status: 404 };
+  if (args.versionParam) {
+    if (!recipe.versions[args.versionParam]) {
+      return {
+        ok: false,
+        error: `unknown version: ${args.versionParam}`,
+        status: 404,
+      };
     }
-    return { ok: true, value: versionParam };
+    return { ok: true, value: args.versionParam };
   }
-  const pinned = recipe.channels?.[channelParam];
+
+  if (args.pathRef) {
+    const fromChannel = resolveChannel(recipe, args.pathRef);
+    if (fromChannel) return { ok: true, value: fromChannel };
+    if (recipe.versions[args.pathRef]) {
+      return { ok: true, value: args.pathRef };
+    }
+    return {
+      ok: false,
+      error: `unknown channel or version: ${args.pathRef}`,
+      status: 404,
+    };
+  }
+
+  const channel = args.channelParam ?? "rc";
+  const pinned = resolveChannel(recipe, channel);
   if (!pinned) {
     return {
       ok: false,
-      error: `unknown or unset channel: ${channelParam}`,
+      error: `unknown or unset channel: ${channel}`,
       status: 404,
     };
   }
@@ -238,6 +305,6 @@ else
 fi
 
 echo "mycmd: done → $DEST"
-echo "mycmd: next: cd $DEST && just setup && just deploy"
+echo "mycmd: next: cd $DEST && just --list"
 `;
 }

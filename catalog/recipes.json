@@ -3,13 +3,42 @@
   "recipes": {
     "qwen3-8-flash-next/spark": {
       "channels": {
-        "rc": "0.0.1-rc1"
+        "rc": "0.0.1-rc2"
       },
       "versions": {
         "0.0.1-rc1": {
           "artifact": "qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz",
           "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.0.1-rc1/qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz",
           "sha256": "7f0180b74186fdc2bb4d52463ed2f3d5ac29921aaf71652da45c4b54bb3b4e27"
+        },
+        "0.0.1-rc2": {
+          "artifact": "qwen3-8-flash-next-spark-0.0.1-rc2.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.0.1-rc2/qwen3-8-flash-next-spark-0.0.1-rc2.tar.gz",
+          "sha256": "c73bdd8a37a2b3e362afb5b49ed39c95700bb8573558120cc3cf34f844048eb4"
+        }
+      }
+    },
+    "qwen3-8-flash-next/rtx-6000-pro": {
+      "channels": {
+        "rc": "0.0.1-rc2"
+      },
+      "versions": {
+        "0.0.1-rc2": {
+          "artifact": "qwen3-8-flash-next-rtx-6000-pro-0.0.1-rc2.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.0.1-rc2/qwen3-8-flash-next-rtx-6000-pro-0.0.1-rc2.tar.gz",
+          "sha256": "de731d0b649feab5d5f471dd2eac3948a7fb8ab862532d3970a788836d14e74f"
+        }
+      }
+    },
+    "security/vps-baseline": {
+      "channels": {
+        "rc": "0.0.1-rc1"
+      },
+      "versions": {
+        "0.0.1-rc1": {
+          "artifact": "security-vps-baseline-0.0.1-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/security-vps-baseline-v0.0.1-rc1/security-vps-baseline-0.0.1-rc1.tar.gz",
+          "sha256": "96b9b45a1b0033256214a5df1f85e8fd9131e38e43cb5559bbeab9a686b304f9"
         }
       }
     }

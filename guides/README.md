@@ -10,6 +10,7 @@ For **scripted game server installs** (Satisfactory, Palworld) with SteamCMD, UF
 |--------|--------|-------------------|
 | WIP | [ULTIMATE Proxmox Hypervisor](how-to_ultimate_proxmox.md) | ZFS, cloud-init, Cloudflare remote access, Portainer, Plex, K3s, Ansible |
 | WIP | [Remotely Access Your Servers via Cloudflare](how-to_cloudflare.md) | Tunnels, SASE/Zero-trust, MFA, Authelia |
+| WIP | [Universal Cloudflare Worker distribution gateway](how-to_distro_cloudflare_github.md) | `get.` hostname, Worker + GitHub Releases catalog, `@channel` URLs (≤2 GiB artifacts) |
 | WIP | [PfSense NG-FW Configuration with VLANS](how-to_pfsense.md) | VLANs, firewall, HAProxy |
 | WIP | [Game Servers Hub](how-to_game_servers.md) | Overview of self-hosted vs paid options; quick path to SteamCMD, Pterodactyl, Minecraft guides |
 | WIP | [How-to SteamCMD](how-to_steamCMD.md) | SteamCMD principles; Satisfactory, Palworld, ARK; preferred scripts in [local-game-servers](../scripts/local-game-servers/) |

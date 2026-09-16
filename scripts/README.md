@@ -6,11 +6,11 @@ Scripts and configs used by the how-to guides. Organized by purpose.
 
 | Folder | Purpose |
 |--------|---------|
-| [security/](security/) | Fail2ban, new sudo user, SSH/system hardening (`vps-sec-harden.sh`). For home LAN or VPS; see README for lockout safety. |
+| [security/](security/) | VPS/LAN baseline (`security/vps-baseline`): mise + just wrappers around Fail2ban, new sudo user, SSH harden. Prefer `get.mycmd.site`; archived wget under `security/archive/`. |
 | [local-game-servers/](local-game-servers/) | SteamCMD-based game servers: Satisfactory, Palworld. UFW + systemd, tuned for local home or VPS. |
 | [wireguard/](wireguard/) | WireGuard VPN server: standalone script and cloud-init user-data. |
 | [github/](github/) | Git/GitHub auth: WSL2 + `gh` browser setup so OAuth opens in Windows default browser. |
-| [local-ai/](local-ai/) | Qwen3.8 NVFP4 / vLLM on DGX Spark (PLE mmap, mise + just). Interim: tar/scp `scripts/local-ai`; see folder README. |
+| [local-ai/](local-ai/) | Qwen3.8 NVFP4 / vLLM on DGX Spark + RTX PRO 6000 (mise + just). Prefer `get.mycmd.site`; see folder README. |
 | [packaging/](packaging/) | Build recipe release tarballs + sha256 for `get.mycmd.site` (`package-recipe.sh`). |
 
 ## Downloading scripts (wget)
@@ -24,7 +24,7 @@ https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scri
 Example (from a Linux host or Proxmox console):
 
 ```bash
-wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/f2b-install.sh -O f2b-install.sh
+wget https://raw.githubusercontent.com/bmurrtech/how-to-selfhost/refs/heads/main/scripts/security/archive/f2b-install.sh -O f2b-install.sh
 chmod +x f2b-install.sh
 sudo ./f2b-install.sh
 ```

@@ -1,0 +1,30 @@
+# Thin operator UX for scripts/security (logic lives in the shell scripts).
+# Recipe: security / vps-baseline
+
+set dotenv-load := false
+
+default:
+	@just --list
+
+# Bootstrap / preflight: scripts present + mise tools (no host mutation).
+check:
+	bash scripts/check.sh
+
+# Read-only probe of sshd / UFW / fail2ban (no mutation).
+doctor:
+	bash scripts/doctor.sh
+
+status:
+	bash scripts/doctor.sh
+
+# Interactive sudo user + pubkey paste (run as root / sudo).
+user *ARGS:
+	sudo bash ./new-sudo-user.sh {{ARGS}}
+
+# VPS SSH/UFW/sysctl/unattended-upgrades baseline (run as a sudo user).
+harden *ARGS:
+	bash ./vps-sec-harden.sh {{ARGS}}
+
+# Fail2ban installer. Pass flags after -- e.g. just f2b -- --whitelist 203.0.113.7
+f2b *ARGS:
+	sudo bash ./f2b-install.sh {{ARGS}}
