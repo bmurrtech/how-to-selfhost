@@ -6,21 +6,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../../../scripts/lib/recipe_common.sh
 source "${SCRIPT_DIR}/../../../../scripts/lib/recipe_common.sh"
 recipe_bootstrap
+# shellcheck source=../../../../scripts/lib/ops_common.sh
+source "${LIB_DIR}/ops_common.sh"
 
 FAILS=0
 WARNS=0
 
-pass() { printf '[PASS] %-18s %s\n' "$1" "${2:-}"; }
+pass() { printf '[PASS] %-22s %s\n' "$1" "${2:-}"; }
 warn() {
-	printf '[WARN] %-18s %s\n' "$1" "${2:-}"
+	printf '[WARN] %-22s %s\n' "$1" "${2:-}"
 	WARNS=$((WARNS + 1))
 }
 fail() {
-	printf '[FAIL] %-18s %s\n' "$1" "${2:-}"
+	printf '[FAIL] %-22s %s\n' "$1" "${2:-}"
 	FAILS=$((FAILS + 1))
 }
-skip() { printf '[SKIP] %-18s %s\n' "$1" "${2:-}"; }
+skip() { printf '[SKIP] %-22s %s\n' "$1" "${2:-}"; }
 
+ops_pass() { pass "$1" "$2"; }
+ops_warn() { warn "$1" "$2"; }
+ops_fail() { fail "$1" "$2"; }
+ops_skip() { skip "$1" "$2"; }
+
+echo "=== doctor / check ==="
 echo "Qwen3-8-Flash-Next / Spark"
 echo
 
@@ -89,7 +97,15 @@ else
 fi
 if df -h "$HF_CACHE" >/dev/null 2>&1 || df -h "${HOME}" >/dev/null 2>&1; then
 	avail="$(df -h "$HF_CACHE" 2>/dev/null | awk 'NR==2{print $4}' || df -h "$HOME" | awk 'NR==2{print $4}')"
-	pass "Storage" "avail ${avail} near cache"
+	avail_gib="$(df -P "$HF_CACHE" 2>/dev/null | awk 'NR==2{printf "%d", $4/1024/1024}' || df -P "$HOME" | awk 'NR==2{printf "%d", $4/1024/1024}')"
+	avail_gib="${avail_gib:-0}"
+	if [[ "$avail_gib" -ge 100 ]]; then
+		pass "Storage" "avail ${avail} (~${avail_gib} GiB) near cache"
+	elif [[ "$avail_gib" -ge 50 ]]; then
+		warn "Storage" "avail ${avail} (~${avail_gib} GiB) — prefer ≥100 GiB for weights"
+	else
+		fail "Storage" "avail ${avail} (~${avail_gib} GiB) — too small for NVFP4 cache"
+	fi
 else
 	skip "Storage" "df failed"
 fi
@@ -177,9 +193,21 @@ else
 	skip "Service state" "container $NAME not created"
 fi
 
+ops_doctor_mig
+ops_doctor_runtime
+ops_doctor_port
+
+echo
+echo "--- effective knobs ---"
+printf '  MODEL=%s IMAGE=%s\n' "${MODEL}" "${IMAGE}"
+printf '  CTX=%s SEQS=%s GPU_MEM=%s MTP=%s\n' "${CTX:-}" "${SEQS:-}" "${GPU_MEM:-}" "${MTP:-}"
+printf '  HF_CACHE=%s\n' "${HF_CACHE:-}"
+echo
+
 echo
 if [[ "$FAILS" -gt 0 ]]; then
-	echo "NOT READY (${FAILS} fail, ${WARNS} warn)"
+	echo "STATUS: FAIL"
+	echo "RESULT: FAIL (${FAILS} fail, ${WARNS} warn)"
 	echo
 	echo "Next:"
 	echo "  just setup"
@@ -187,11 +215,13 @@ if [[ "$FAILS" -gt 0 ]]; then
 fi
 
 if [[ "$WARNS" -gt 0 ]]; then
-	echo "READY WITH WARNINGS (${WARNS})"
+	echo "STATUS: WARN"
+	echo "RESULT: WARN (${WARNS} warn)"
 else
-	echo "READY"
+	echo "STATUS: PASS"
+	echo "RESULT: PASS"
 fi
 echo
 echo "Next:"
-echo "  just deploy"
+echo "  just probe | just deploy"
 exit 0

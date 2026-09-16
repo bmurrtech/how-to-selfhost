@@ -1,0 +1,29 @@
+schema: 1
+
+recipe:
+  name: qwen3-8-flash-next/rtx-6000-pro
+  version: 0.0.1-rc2
+
+model:
+  id: nvidia/Qwen3.8-Flash-Next-NVFP4
+  family: qwen3-8-flash-next
+
+hardware:
+  host: rtx-6000-pro
+  topology: single-node
+  gpu_profiles: 1-8
+  notes: >
+    One recipe for bare-metal Ubuntu and RunPod (or any host already inside
+    vllm/vllm-openai:qwen38-flash-next). Coarse EXEC_MODE=docker|native detection.
+    Multi-node reserved separately. Do not publish a custom Docker Hub image.
+
+runtime:
+  engine: vllm
+  image: vllm/vllm-openai:qwen38-flash-next
+  digest: sha256:PENDING_RELEASE_PIN
+  modes: [docker, native]
+  cuda_host_min: "13.0"
+
+deployment:
+  strategy: official-image-ple-profile
+  served_model_name: qwen3.8-flash-next

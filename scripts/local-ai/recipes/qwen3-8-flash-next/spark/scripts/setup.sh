@@ -9,19 +9,12 @@ recipe_bootstrap
 
 echo "=== setup: qwen3-8-flash-next / spark ==="
 
-# dirs
+# dirs + secrets
 mkdir -p "$HF_CACHE" "${HOME}/models" "$BENCH_DIR"
-if [[ ! -f "${ROOT_DIR}/.env" ]]; then
-	if [[ -f "${ROOT_DIR}/.env.example" ]]; then
-		cp "${ROOT_DIR}/.env.example" "${ROOT_DIR}/.env"
-		chmod 600 "${ROOT_DIR}/.env"
-		echo "created ${ROOT_DIR}/.env from example (fill VLLM_API_KEY / HF_TOKEN)"
-	else
-		echo "WARN: no .env or .env.example at ${ROOT_DIR}" >&2
-	fi
-else
-	echo "skip: .env present"
-fi
+CONFIG_PROMPT_HF_TOKEN=0
+export CONFIG_PROMPT_HF_TOKEN
+config_env_ensure
+unset CONFIG_PROMPT_HF_TOKEN
 
 # weights
 echo "--- weights ---"

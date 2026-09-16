@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# logs.sh — follow or tail container logs (no secret echo beyond docker's own output).
+# logs.sh — container logs (+ error/cuda/oom/vllm filters).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../../../scripts/lib/recipe_common.sh
 source "${SCRIPT_DIR}/../../../../scripts/lib/recipe_common.sh"
 recipe_bootstrap
+# shellcheck source=../../../../scripts/lib/ops_common.sh
+source "${LIB_DIR}/ops_common.sh"
+# shellcheck source=../../../../scripts/lib/ops_logs.sh
+source "${LIB_DIR}/ops_logs.sh"
 
-TAIL="${1:-100}"
-if [[ "${FOLLOW:-0}" == "1" || "${1:-}" == "-f" ]]; then
-	docker logs -f "$NAME"
-else
-	docker logs --tail "$TAIL" "$NAME"
-fi
+arg="${1:-100}"
+ops_logs_run docker "$NAME" "$arg"

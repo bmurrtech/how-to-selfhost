@@ -8,16 +8,17 @@ Local design SoT (gitignored): `pm/qwen-self-host/` (e.g. `PRDs/002-PRD-mise-jus
 
 ## Project overview
 
-Reproducible **Qwen3.8-Flash-Next-NVFP4** on **1× DGX Spark** (vLLM, PLE mmap, Docker Compose). Operator UX is `just` via `mise`. First distribution milestone recipe ID: `qwen3-8-flash-next/spark` (see `CONTEXT.md`).
+Reproducible **Qwen3.8-Flash-Next-NVFP4** on **DGX Spark** and **RTX PRO 6000** (1–8 GPUs, single node; bare-metal Docker or native-in-vLLM). Operator UX is `just` via `mise`. Recipe IDs: `qwen3-8-flash-next/{spark,rtx-6000-pro}` (see `CONTEXT.md`).
 
 ---
 
 ## Project structure
 
-- `recipes/qwen3-8-flash-next/spark/` — `recipe.yaml`, `compose.yaml`, `config/serve.env`, `scripts/{check,setup,deploy,status,logs,benchmark,stop,config}.sh`
-- `scripts/lib/` — shared `load_env`, `weights`, `resolve_serve`, `pacman_progress`, `recipe_common`
+- `recipes/qwen3-8-flash-next/spark/` — PLE mmap Compose path
+- `recipes/qwen3-8-flash-next/rtx-6000-pro/` — unified RTX PRO 6000 (docker + native modes, profiles, RunPod guide in README)
+- `scripts/lib/` — shared `load_env`, `config_env`, `weights`, `resolve_serve`, `rtx_serve`, `docker_nct`, `pacman_progress`, `recipe_common`
 - Reserved skeleton dirs (`hosts/`, `topologies/`, `runtimes/`, `models/`, …) — unpopulated (`.gitkeep` only)
-- `.env` / `.runtime.env` — gitignored local state
+- `.env` / `.runtime.env` / `.run/` — gitignored local state
 
 ---
 
@@ -25,7 +26,7 @@ Reproducible **Qwen3.8-Flash-Next-NVFP4** on **1× DGX Spark** (vLLM, PLE mmap, 
 
 ```text
 mise install → edit recipe/scripts → static checks on edited *.sh
-→ just check → (on host) just setup / deploy / status
+→ just doctor → (on host) just setup / deploy / probe
 → optional just benchmark → report commands + outcomes
 ```
 
@@ -42,7 +43,7 @@ cp .env.example .env && chmod 600 .env   # set VLLM_API_KEY, HF_TOKEN
 just setup                               # pinned image + weights; idempotent
 ```
 
-Lifecycle: `just check | setup | deploy | status | logs | benchmark | stop` (Justfile stays thin — logic in scripts).
+Lifecycle: `just doctor | probe | benchmark | setup | deploy | status | logs | stop` (Justfile thin — logic in scripts). Troubleshoot: `benchmark-load`, `gpu`, `snapshot`.
 
 ---
 
@@ -59,8 +60,9 @@ shfmt -d -i 0 path/to/file.sh
 **On Spark before completion of deploy-affecting changes:**
 
 ```bash
-just check
+just doctor
 just deploy    # run twice when claiming idempotency
+just probe
 just status
 # optional: just benchmark
 ```
@@ -90,5 +92,6 @@ Do not claim an interrupted/timed-out on-host run passed. Do not weaken a check 
 
 ## Gotchas
 
+- RTX RunPod: `rtx_prefer_volume_cache` defaults caches under writable `/workspace` (else `/runpod-volume`); explicit `HF_*` / `VLLM_CACHE_ROOT` win.
 - Keep `prompt_tokens + max_tokens ≤ CTX` (default CTX 16384).
 - Raise `SEQS` before concurrency sweeps or aggregate tok/s flatlines.

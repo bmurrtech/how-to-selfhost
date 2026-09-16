@@ -176,3 +176,43 @@ run_download() {
 	done
 	return 1
 }
+
+# Native download when already inside a vLLM / HF-capable image (RunPod approach A).
+run_download_native() {
+	local attempt max_attempts=3 rc
+	local workers="${HF_MAX_WORKERS:-8}"
+
+	mkdir -p "$HF_CACHE"
+	export HF_HOME="${HF_HOME:-$HF_CACHE}"
+	if [[ -n "${HF_TOKEN:-}" ]]; then
+		export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
+		echo "auth: HF_TOKEN set"
+	else
+		echo "auth: anonymous (may hit rate limits)"
+	fi
+
+	if ! command -v hf >/dev/null 2>&1 && ! command -v huggingface-cli >/dev/null 2>&1; then
+		echo "error: hf / huggingface-cli not on PATH (expected in vllm/qwen38 image)" >&2
+		return 1
+	fi
+
+	for attempt in $(seq 1 "$max_attempts"); do
+		pacman_phase $((10 + attempt * 20)) "hf download attempt $attempt/$max_attempts (native)"
+		set +e
+		if command -v hf >/dev/null 2>&1; then
+			hf download "$VLLM_MODEL" --max-workers "$workers"
+			rc=$?
+		else
+			huggingface-cli download "$VLLM_MODEL"
+			rc=$?
+		fi
+		set -e
+		if [[ $rc -eq 0 ]] && weights_complete; then
+			pacman_progress_done "weights ready"
+			return 0
+		fi
+		echo "console: download incomplete rc=$rc — retry" >&2
+		sleep $((attempt * 5))
+	done
+	return 1
+}

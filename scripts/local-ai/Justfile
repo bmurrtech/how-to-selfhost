@@ -1,16 +1,51 @@
-# Thin operator UX for scripts/local-ai (ADR-009: logic lives in scripts).
+# Thin operator UX for scripts/local-ai (logic lives in scripts/).
 # Default recipe: qwen3-8-flash-next / spark
+# Override: RECIPE=recipes/qwen3-8-flash-next/rtx-6000-pro just doctor
 
 set dotenv-load := false
 
-RECIPE := "recipes/qwen3-8-flash-next/spark"
-export COMPOSE_PROJECT_NAME := "qwen38-spark"
+RECIPE := env_var_or_default("RECIPE", "recipes/qwen3-8-flash-next/spark")
+export COMPOSE_PROJECT_NAME := env_var_or_default("COMPOSE_PROJECT_NAME", "qwen38-spark")
 
 default:
 	@just --list
 
+# --- daily loop ---
+
+doctor:
+	bash {{RECIPE}}/scripts/doctor.sh
+
+# Alias kept for bootstrap installer + older docs
 check:
-	bash {{RECIPE}}/scripts/check.sh
+	bash {{RECIPE}}/scripts/doctor.sh
+
+config *ARGS:
+	bash {{RECIPE}}/scripts/config.sh {{ARGS}}
+
+probe:
+	bash {{RECIPE}}/scripts/probe.sh
+
+benchmark *ARGS:
+	bash {{RECIPE}}/scripts/benchmark.sh {{ARGS}}
+
+# --- triage ---
+
+benchmark-load *ARGS:
+	bash {{RECIPE}}/scripts/benchmark-load.sh {{ARGS}}
+
+gpu *ARGS:
+	bash {{RECIPE}}/scripts/gpu.sh {{ARGS}}
+
+gpu-watch:
+	bash {{RECIPE}}/scripts/gpu.sh --watch
+
+logs *ARGS:
+	bash {{RECIPE}}/scripts/logs.sh {{ARGS}}
+
+snapshot:
+	bash {{RECIPE}}/scripts/snapshot.sh
+
+# --- lifecycle ---
 
 setup:
 	bash {{RECIPE}}/scripts/setup.sh
@@ -21,14 +56,8 @@ deploy:
 status:
 	bash {{RECIPE}}/scripts/status.sh
 
-logs *ARGS:
-	bash {{RECIPE}}/scripts/logs.sh {{ARGS}}
-
-benchmark *ARGS:
-	bash {{RECIPE}}/scripts/benchmark.sh {{ARGS}}
-
 stop:
 	bash {{RECIPE}}/scripts/stop.sh
 
-config:
-	bash {{RECIPE}}/scripts/config.sh
+token:
+	bash {{RECIPE}}/scripts/token.sh

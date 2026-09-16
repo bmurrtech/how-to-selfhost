@@ -2,7 +2,7 @@ schema: 1
 
 recipe:
   name: qwen3-8-flash-next/spark
-  version: 0.1.0
+  version: 0.0.1-rc2
 
 model:
   id: nvidia/Qwen3.8-Flash-Next-NVFP4

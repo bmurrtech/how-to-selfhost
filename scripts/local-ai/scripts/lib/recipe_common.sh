@@ -22,6 +22,8 @@ recipe_bootstrap() {
 
 	# shellcheck source=./load_env.sh
 	source "${LIB_DIR}/load_env.sh"
+	# shellcheck source=./config_env.sh
+	source "${LIB_DIR}/config_env.sh"
 	# shellcheck source=./pacman_progress.sh
 	source "${LIB_DIR}/pacman_progress.sh"
 	# shellcheck source=./weights.sh
