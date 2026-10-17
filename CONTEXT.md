@@ -1,8 +1,16 @@
-# CONTEXT.md
+---
+title: how-to-selfhost
+description: Domain glossary and mycmd distribution architecture for this monorepo.
+type: glossary
+okf_version: "0.2"
+tags: [selfhost, mycmd, recipes, glossary]
+---
+
+# how-to-selfhost
 
 Repo-wide domain glossary and **mycmd distribution architecture**. Agents: read this before packaging, bootstrap, catalog, or release work.
 
-Do **not** duplicate subtree runbooks here — follow the pointers below.
+Do **not** duplicate subtree runbooks or ops commands here — those live in [`AGENTS.md`](AGENTS.md) and nested READMEs. Progressive disclosure: [`knowledge/index.md`](knowledge/index.md).
 
 ---
 
@@ -16,9 +24,10 @@ Do **not** duplicate subtree runbooks here — follow the pointers below.
 | Security VPS baseline quickstart | [`scripts/security/README.md`](scripts/security/README.md) |
 | Scripts index | [`scripts/README.md`](scripts/README.md) |
 | Issue tracker / triage / domain-doc rules | [`docs/agents/`](docs/agents/) |
-| ADRs | `docs/ADRs/` via `/to-adr` — **not** Matt’s `docs/adr/` |
+| ADRs | [`docs/adr/`](docs/adr/index.md) via `/to-adr` |
+| OKF concepts | [`knowledge/index.md`](knowledge/index.md) |
 | Code graph (Graft) | `graft/` (gitignored). Rebuild: `graft build` |
-| Local design notes (gitignored) | `pm/qwen-self-host/` |
+| Local design notes (gitignored) | `pm/qwen-self-host/`, `docs/prd/` |
 
 Other `scripts/*/README.md` files are the human SoT for that subtree.
 
@@ -131,7 +140,7 @@ Freeze contract → build recipe locally → prove from git clone → determinis
 
 **Key milestone:** clean host `curl -fsSL https://get.mycmd.site/qwen3-8-flash-next/<spark|rtx-6000-pro>@beta | sh` → `just doctor` → (on GPU host) `just setup` / `deploy` / `probe`. Prove recipe deploy (A) before distribution (B).
 
-**Scaffold paths:** `bootstrap/` (Worker), `catalog/recipes.json`, `.github/workflows/deploy-bootstrap.yml`. Maintainer CF wizard (local): `pm/qwen-self-host/distro/`. ADR: `docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md`.
+**Scaffold paths:** `bootstrap/` (Worker), `catalog/recipes.json`, `.github/workflows/deploy-bootstrap.yml`. Maintainer CF wizard (local): `pm/qwen-self-host/distro/`. ADR: [`docs/adr/how-to-selfhost-0001-ADR-mycmd-site-distro.md`](docs/adr/how-to-selfhost-0001-ADR-mycmd-site-distro.md).
 
 ---
 
@@ -141,3 +150,19 @@ Freeze contract → build recipe locally → prove from git clone → determinis
 - Graph cache: `graft/` (gitignored; teammates run `graft build`)
 - This repo is mostly shell — Graft’s parsers cover JS/TS/Python/Go/Rust/etc., **not** `.sh`. Expect a sparse graph until more typed source lands (e.g. bootstrap Worker, `uvx` bench).
 - Cursor wiring is local under `.cursor/` (also gitignored here).
+
+---
+
+## Hard rules
+
+1. **No glossary/ops duplication** — definitions here; commands and boundaries in `AGENTS.md`.
+2. **`docs/prd/` ignored** (setup **A**); **ADRs tracked** under `docs/adr/`. Cite setup/ADR 0013 in the skills library; do not restate AGENTS bullets here.
+3. **`pm/` stays local** — never stage; complementary scratch for design notes alongside ignored PRDs.
+
+---
+
+## See also
+
+- [`knowledge/index.md`](knowledge/index.md)
+- [`docs/adr/index.md`](docs/adr/index.md)
+- [`AGENTS.md`](AGENTS.md)

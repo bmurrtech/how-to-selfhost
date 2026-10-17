@@ -2,13 +2,13 @@
 
 Operating manual for coding agents in **how-to-selfhost**. Prefer the smallest coherent change, verify it, then report what ran.
 
-This file does not replace guides, READMEs, or source. Domain glossary + mycmd distribution architecture: [`CONTEXT.md`](CONTEXT.md).
+This file does not replace guides, READMEs, or source. Domain glossary + mycmd distribution architecture: [`CONTEXT.md`](CONTEXT.md). PRDs under gitignored `docs/prd/` (setup **A**).
 
 ---
 
 ## Project overview
 
-Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for security hardening, game servers, WireGuard, GitHub/WSL auth, and local LLM recipes. Near-term product work is packaging/distributing recipe tarballs (first: `scripts/local-ai` → `0.0.1-rc1` via `get.mycmd.site`).
+Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for security hardening, game servers, WireGuard, GitHub/WSL auth, and local LLM recipes. Near-term product work is packaging/distributing recipe tarballs (first: `scripts/local-ai` → via `get.mycmd.site`). Operators use **mise** + **just** for the recipe lifecycle.
 
 ---
 
@@ -20,12 +20,16 @@ Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for 
 | `scripts/` | Executable scripts + per-folder READMEs — index: [`scripts/README.md`](scripts/README.md) |
 | `scripts/local-ai/` | First packageable recipe tree (mise + just) |
 | `docs/agents/` | Skill config: issue tracker, triage labels, domain-doc rules |
-| `docs/ADRs/` | ADRs via `/to-adr` (not Matt’s `docs/adr/`) |
+| `docs/adr/` | ADRs via `/to-adr` — index: [`docs/adr/index.md`](docs/adr/index.md) |
+| `docs/prd/` | PRDs (ignored) |
+| `knowledge/` | OKF concepts — [`knowledge/index.md`](knowledge/index.md) |
 | `CONTEXT.md` | Glossary + distribution / bootstrap / catalog architecture |
+| `CHANGELOG.md` | Recipe-release notes (Keep a Changelog; Unreleased + per-recipe versions) |
 | `bootstrap/` | Cloudflare Worker (`get.mycmd.site`) + Wrangler |
 | `catalog/` | Git-controlled recipe → channel → version → artifact map |
 | `graft/` | Local Graft graph cache (gitignored; sparse until typed source lands) |
 | `pm/` | Local-only notes/PRDs (gitignored — never stage) |
+| `.scratch/` | Local agent scratch (diagrams, adr-optics; gitignored) |
 | `.github/workflows/` | Infra: deploy bootstrap Worker (Wrangler) |
 
 ---
@@ -60,6 +64,14 @@ Subtree-specific install/run loops live in nested docs (see **Further instructio
 
 ---
 
+## Testing
+
+| Seam | Command | Notes |
+|------|---------|-------|
+| _(none indexed yet)_ | | Add test-map rows in `knowledge/` as seams land |
+
+---
+
 ## Code conventions
 
 - Prefer idempotent scripts; document destructive steps in the folder README.
@@ -76,7 +88,7 @@ Subtree-specific install/run loops live in nested docs (see **Further instructio
 - Triage labels: [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
 - Commit style in this repo: short conventional prefixes (`feat:`, `fix:`, `docs:`, …).
 - Commit / push / open a PR only when the user explicitly asks.
-- Never stage `pm/`, `.env`, `scripts/local-ai/.env`, `**/.runtime.env*`, `graft/`, `bootstrap/.dev.vars`, or `dist/`.
+- Never commit secrets or ignored trees (`pm/`, `docs/prd/`, `.scratch/`, agent dirs, `.env`, `scripts/local-ai/.env`, `**/.runtime.env*`, `graft/`, `bootstrap/.dev.vars`, `dist/`).
 
 Infra workflow: `.github/workflows/deploy-bootstrap.yml` (Wrangler). Recipe-release automation not required for first manual `0.0.1-rc1`.
 
@@ -87,18 +99,18 @@ Infra workflow: `.github/workflows/deploy-bootstrap.yml` (Wrangler). Recipe-rele
 | Do | Don't | Why |
 |----|-------|-----|
 | Load secrets from `.env` / env | Commit `.env` or print secrets | Credential exposure |
-| Keep `/pm/` local | `git add pm/` | Intentionally gitignored workspace |
+| Keep `/pm/` and `docs/prd/` local | `git add pm/` or `docs/prd/` | Intentionally gitignored |
 | Regenerate Graft with `graft build` | Commit `graft/` | Local cache; teammates rebuild |
-| Record decisions with `/to-adr` → `docs/ADRs/` | Create Matt-style `docs/adr/` | Repo ADR home is `docs/ADRs/` |
+| Record decisions with `/to-adr` → `docs/adr/` | Invent a second ADR home | bmurrtech standard path |
 | Package releases update catalog only | Change DNS/Worker on every recipe version | Distribution contract in `CONTEXT.md` |
 
 ---
 
-## Agent skills (Matt Pocock setup)
+## Agent skills
 
 - **Issue tracker:** GitHub Issues — [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md)
 - **Triage labels:** defaults — [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md)
-- **Domain docs:** single-context `CONTEXT.md` + `docs/ADRs/` — [`docs/agents/domain.md`](docs/agents/domain.md)
+- **Domain docs:** [`CONTEXT.md`](CONTEXT.md) + [`docs/adr/`](docs/adr/) + [`knowledge/`](knowledge/index.md) — [`docs/agents/domain.md`](docs/agents/domain.md)
 
 ---
 
@@ -110,4 +122,4 @@ Infra workflow: `.github/workflows/deploy-bootstrap.yml` (Wrangler). Recipe-rele
 | **Packaging, bootstrap, catalog, `get.mycmd.site`, release channels** | [`CONTEXT.md`](CONTEXT.md) first |
 | **Any other `scripts/<area>/`** | That folder’s `README.md` (and nested READMEs) |
 | **Orientation via code graph** (when typed source exists) | `graft ask "…"`, `graft map`; rule: `.cursor/rules/graft.mdc` |
-| **Local design SoT (PRDs/status)** | `pm/notes/…` (gitignored; do not commit) |
+| **Local design SoT (PRDs/status)** | `docs/prd/` or `pm/` (gitignored; do not commit) |

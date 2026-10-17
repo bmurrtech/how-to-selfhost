@@ -3,7 +3,7 @@
 Cloudflare Worker behind `https://get.mycmd.site/<project>/<recipe>[@channel|version]`.
 Resolves versions from the git catalog and returns a shell installer (client downloads the artifact; Worker does not proxy tarball bytes).
 
-Architecture: [`CONTEXT.md`](../CONTEXT.md), ADR [`docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md`](../docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md), generic playbook [`guides/how-to_distro_cloudflare_github.md`](../guides/how-to_distro_cloudflare_github.md).
+Architecture: [`CONTEXT.md`](../CONTEXT.md), ADR [`docs/adr/how-to-selfhost-0001-ADR-mycmd-site-distro.md`](../docs/adr/how-to-selfhost-0001-ADR-mycmd-site-distro.md), generic playbook [`guides/how-to_distro_cloudflare_github.md`](../guides/how-to_distro_cloudflare_github.md).
 
 ## Local
 

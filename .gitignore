@@ -11,6 +11,13 @@ logs/
 # Agent Skills, Settings, Rules, and Data
 .cursor/
 .agents/
+.claude/
+
+# Local PRDs (setup A — not committed)
+/docs/prd/
+
+# Agent scratch pad (visual-explainer, to-adr optics, ideas)
+.scratch/
 
 # Graft code graph (local; regenerated via `graft init` / `graft update`)
 /graft/

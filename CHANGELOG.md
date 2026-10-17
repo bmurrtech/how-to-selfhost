@@ -4,6 +4,12 @@ All notable **recipe release** changes for this repository. Versions below are *
 
 Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+
+- Agent scaffold: ADR home `docs/ADRs/` → `docs/adr/` (bmurrtech); OKF `knowledge/` stub; PRDs stay gitignored under `docs/prd/` (setup **A**); `.scratch/` + `CLAUDE.md` pointer.
+
 ## [0.0.1-rc2] — 2026-09-15
 
 ### Added

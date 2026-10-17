@@ -1,6 +1,6 @@
 # how-to-selfhost-0001-ADR-mycmd-site-distro
 
-<!-- File: docs/ADRs/how-to-selfhost-0001-ADR-mycmd-site-distro.md -->
+<!-- File: docs/adr/how-to-selfhost-0001-ADR-mycmd-site-distro.md -->
 
 ## Status
 Accepted
