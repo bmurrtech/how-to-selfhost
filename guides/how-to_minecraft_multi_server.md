@@ -228,9 +228,23 @@ Edit `user_jvm_args.txt` or `start.sh` and adjust `-Xmx` / `-Xms` to match your 
 
 ## Minecraft Server Settings
 
-> You must be in the server folder (or use Crafty's file editor) to access these files.
+Use the running Java server's **Terminal** tab in Crafty for the commands below. Enter console commands without a leading `/`. In-game commands need the `/` and operator permissions.
 
 ### Whitelist
+
+Replace `PlayerName` with each player's Java username, then check the list:
+
+```text
+whitelist on
+whitelist add PlayerName
+whitelist list
+```
+
+To remove a player, use `whitelist remove PlayerName`. These commands update the server's whitelist without manual UUID entry.
+
+For a longer roster, the optional [ServerBuddy access control builder](https://serverbuddy.net/tools/minecraft-whitelist-command-generator) checks Java username format, deduplicates names, and prepares add/remove commands. Review the output and remove leading slashes before using it in the console. Syntax checks alone do not verify that accounts exist.
+
+If editing files instead, stop the server and back up the existing files first. Use the server folder or Crafty's file editor, and preserve any existing entries:
 
 - In `server.properties`: set `white-list=true`
 - In `whitelist.json`:
@@ -242,18 +256,26 @@ Edit `user_jvm_args.txt` or `start.sh` and adjust `-Xmx` / `-Xms` to match your 
   ```
   > Tip: Use [Minecraft UUID Converter](https://mcuuid.net/) to find UUIDs.
 
+Start the server again after saving manual changes.
+
 ### Operator (admin) in-game
 
-Add yourself to `ops.json` to use commands like `/whitelist add`:
+Run `op PlayerName` in the server console to grant a trusted administrator in-game command access. Use `deop PlayerName` to revoke it. Ordinary whitelisted players do not need operator permissions.
+
+For reference, `ops.json` contains an array of entries, even for one operator:
 
 ```json
-{
-  "uuid": "389c92c7-eb5c-4a15-92b8-01a27348ac63",
-  "name": "your_username",
-  "level": 4,
-  "bypassesPlayerLimit": false
-}
+[
+  {
+    "uuid": "389c92c7-eb5c-4a15-92b8-01a27348ac63",
+    "name": "your_username",
+    "level": 4,
+    "bypassesPlayerLimit": false
+  }
+]
 ```
+
+The JSON examples need real matching names and UUIDs. Prefer commands for routine changes, as described in [Paper's vanilla data file reference](https://docs.papermc.io/paper/reference/vanilla-data-files/).
 
 ---
 
