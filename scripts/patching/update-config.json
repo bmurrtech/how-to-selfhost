@@ -1,0 +1,18 @@
+{
+  "MaxRetries": 3,
+  "RetryDelaysSec": [15, 30, 60],
+  "RetryJitterSec": 5,
+  "CommandTimeoutSec": 600,
+  "BoundedRunTimeoutSec": 3600,
+  "LogRetentionDays": 14,
+  "LogDirectory": "",
+  "SkipManagers": [],
+  "WingetIncludeUnknown": false,
+  "WingetSkipPackages": [],
+  "ChocolateySkipPackages": [],
+  "ScoopSkipPackages": [],
+  "EnableUvSelfUpdate": true,
+  "EnableBunSelfUpdate": true,
+  "EnableMiseSelfUpdate": true,
+  "FastSkipManagers": ["chocolatey"]
+}

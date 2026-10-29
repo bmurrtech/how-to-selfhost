@@ -8,7 +8,7 @@ This file does not replace guides, READMEs, or source. Domain glossary + mycmd d
 
 ## Project overview
 
-Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for security hardening, game servers, WireGuard, GitHub/WSL auth, and local LLM recipes. Near-term product work is packaging/distributing recipe tarballs (first: `scripts/local-ai` → via `get.mycmd.site`). Operators use **mise** + **just** for the recipe lifecycle.
+Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for security hardening, game servers, WireGuard, GitHub/WSL auth, local LLM recipes, and workstation patching. Recipe tarballs ship via `get.mycmd.site` (catalog + Worker). Most recipes use **mise** + **just**; **workstation patching** is extract-only (no mise bootstrap).
 
 ---
 
@@ -18,7 +18,8 @@ Public self-hosting guides (`guides/`) plus executable scripts (`scripts/`) for 
 |------|------|
 | `guides/` | Human how-to markdown |
 | `scripts/` | Executable scripts + per-folder READMEs — index: [`scripts/README.md`](scripts/README.md) |
-| `scripts/local-ai/` | First packageable recipe tree (mise + just) |
+| `scripts/local-ai/` | Packageable local-ai recipe trees (mise + just) |
+| `scripts/patching/` | Update-only workstation maintenance (`patching/{windows,macos,linux}`; extract-only) |
 | `docs/agents/` | Skill config: issue tracker, triage labels, domain-doc rules |
 | `docs/adr/` | ADRs via `/to-adr` — index: [`docs/adr/index.md`](docs/adr/index.md) |
 | `docs/prd/` | PRDs (ignored) |
@@ -68,7 +69,8 @@ Subtree-specific install/run loops live in nested docs (see **Further instructio
 
 | Seam | Command | Notes |
 |------|---------|-------|
-| _(none indexed yet)_ | | Add test-map rows in `knowledge/` as seams land |
+| Patching unit (Windows) | `Import-Module Pester -MinimumVersion 5.0; Invoke-Pester -Path scripts/patching/Update-DevTools.Tests.ps1` | Mocked; no live package managers |
+| Patching preflight | `bash scripts/patching/scripts/check.sh` | Bootstrap extract-only check |
 
 ---
 
@@ -119,6 +121,7 @@ Infra workflow: `.github/workflows/deploy-bootstrap.yml` (Wrangler). Recipe-rele
 | When working on… | Read |
 |------------------|------|
 | **Local AI / Qwen Spark recipe** (serve, just recipes, PLE mmap, `.env`) | [`scripts/local-ai/AGENTS.md`](scripts/local-ai/AGENTS.md) then [`scripts/local-ai/README.md`](scripts/local-ai/README.md) |
+| **Workstation patching** | [`scripts/patching/README.md`](scripts/patching/README.md); ADR [`docs/adr/0002-ADR-workstation-patching-update-only.md`](docs/adr/0002-ADR-workstation-patching-update-only.md) |
 | **Packaging, bootstrap, catalog, `get.mycmd.site`, release channels** | [`CONTEXT.md`](CONTEXT.md) first |
 | **Any other `scripts/<area>/`** | That folder’s `README.md` (and nested READMEs) |
 | **Orientation via code graph** (when typed source exists) | `graft ask "…"`, `graft map`; rule: `.cursor/rules/graft.mdc` |

@@ -6,9 +6,19 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- Recipe family `patching/{windows,macos,linux}` — update-only workstation maintenance (`scripts/patching/`); shared artifact `patching-devtools-0.1.0-rc1.tar.gz`; extract-only bootstrap (`.mycmd-extract-only`); ADR 0002.
+- Bootstrap Worker: skip mise/`just` when recipe ships `.mycmd-extract-only`; download/verify before mise for all recipes.
+- Packaging: `package-recipe.sh` supports `patching/{windows,macos,linux}`.
+
 ### Changed
 
 - Agent scaffold: ADR home `docs/ADRs/` → `docs/adr/` (bmurrtech); OKF `knowledge/` stub; PRDs stay gitignored under `docs/prd/` (setup **A**); `.scratch/` + `CLAUDE.md` pointer.
+
+### Notes
+
+- **patching 0.1.0-rc1** not published yet: catalog `sha256` is `PENDING_RELEASE` → `get.mycmd.site/patching/*@beta` returns **503** until GitHub Release `patching-devtools-v0.1.0-rc1` + catalog sha256 + Worker deploy. Local: `bash scripts/packaging/package-recipe.sh patching/windows 0.1.0-rc1`.
 
 ## [0.0.1-rc2] — 2026-09-15
 

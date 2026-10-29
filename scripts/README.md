@@ -12,6 +12,8 @@ Scripts and configs used by the how-to guides. Organized by purpose.
 | [github/](github/) | Git/GitHub auth: WSL2 + `gh` browser setup so OAuth opens in Windows default browser. |
 | [local-ai/](local-ai/) | Qwen3.8 NVFP4 / vLLM on DGX Spark + RTX PRO 6000 (mise + just). Prefer `get.mycmd.site`; see folder README. |
 | [packaging/](packaging/) | Build recipe release tarballs + sha256 for `get.mycmd.site` (`package-recipe.sh`). |
+| [patching/](patching/) | Update-only workstation maintenance (`Update-DevTools.ps1` / `update-devtools.sh`). Inventory first; never install missing apps. |
+
 
 ## Downloading scripts (wget)
 

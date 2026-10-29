@@ -1,0 +1,2 @@
+# Marker for get.mycmd.site bootstrap: extract + scripts/check.sh only.
+# Do not install mise or run just from the Worker installer.

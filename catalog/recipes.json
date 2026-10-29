@@ -41,6 +41,42 @@
           "sha256": "96b9b45a1b0033256214a5df1f85e8fd9131e38e43cb5559bbeab9a686b304f9"
         }
       }
+    },
+    "patching/windows": {
+      "channels": {
+        "rc": "0.1.0-rc1"
+      },
+      "versions": {
+        "0.1.0-rc1": {
+          "artifact": "patching-devtools-0.1.0-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/patching-devtools-v0.1.0-rc1/patching-devtools-0.1.0-rc1.tar.gz",
+          "sha256": "PENDING_RELEASE"
+        }
+      }
+    },
+    "patching/macos": {
+      "channels": {
+        "rc": "0.1.0-rc1"
+      },
+      "versions": {
+        "0.1.0-rc1": {
+          "artifact": "patching-devtools-0.1.0-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/patching-devtools-v0.1.0-rc1/patching-devtools-0.1.0-rc1.tar.gz",
+          "sha256": "PENDING_RELEASE"
+        }
+      }
+    },
+    "patching/linux": {
+      "channels": {
+        "rc": "0.1.0-rc1"
+      },
+      "versions": {
+        "0.1.0-rc1": {
+          "artifact": "patching-devtools-0.1.0-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/patching-devtools-v0.1.0-rc1/patching-devtools-0.1.0-rc1.tar.gz",
+          "sha256": "PENDING_RELEASE"
+        }
+      }
     }
   }
 }

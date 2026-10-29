@@ -1,0 +1,46 @@
+# Workstation patching — thin wrappers. Never put secrets here.
+set windows-shell := ["powershell.exe", "-NoProfile", "-Command"]
+set shell := ["bash", "-cu"]
+
+root := justfile_directory()
+
+default:
+	@just --list
+
+# Bootstrap / packaging preflight (no mise)
+check:
+	bash "{{root}}/scripts/check.sh"
+
+# Preview actions (no changes)
+dry-run:
+	powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{{root}}/Update-DevTools.ps1" -DryRun -NoElevate
+
+# Inventory-oriented audit (no changes)
+audit:
+	powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{{root}}/Update-DevTools.ps1" -Audit -NoElevate
+
+# Update already-installed tools (Windows AutoElevate unless cancelled)
+update:
+	powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{{root}}/Update-DevTools.ps1"
+
+# Print Run-as-different-user instructions (no passwords)
+update-elevated:
+	powershell.exe -NoProfile -Command "Write-Host @'\nupdate-elevated does not store or prompt for passwords.\n\nOption A — same user UAC:\n  powershell -File .\Update-DevTools.ps1\n\nOption B — different admin user:\n  1. Shift+right-click PowerShell → Run as different user\n  2. Sign in as the admin account\n  3. cd to this folder\n  4. .\Update-DevTools.ps1 -NoElevate\n\nOption C — scheduled task as that admin:\n  just schedule\n'@"
+
+# Print Task Scheduler registration example (operator supplies credentials to Windows, not Just)
+schedule:
+	powershell.exe -NoProfile -Command "Write-Host @'\nRegister a daily task as an ADMIN user (never put passwords in Justfiles).\n\nRun elevated as the admin that should own the task:\n\n  $action = New-ScheduledTaskAction -Execute powershell.exe -Argument ''-NoProfile -ExecutionPolicy Bypass -File C:\path\to\scripts\patching\Update-DevTools.ps1 -NoElevate -Fast''\n  $trigger = New-ScheduledTaskTrigger -Daily -At 3am\n  Register-ScheduledTask -TaskName mycmd-patching-devtools -Action $action -Trigger $trigger -User $env:USERNAME -RunLevel Highest\n\nOr Task Scheduler GUI → Create Task → choose the admin account when Windows prompts.\n'@"
+
+# Unix entrypoint helpers (Git Bash / WSL / macOS / Linux)
+dry-run-unix:
+	bash "{{root}}/update-devtools.sh" --dry-run
+
+audit-unix:
+	bash "{{root}}/update-devtools.sh" --audit
+
+update-unix:
+	bash "{{root}}/update-devtools.sh"
+
+# Mocked Pester unit tests (needs Pester 5+)
+test:
+	powershell.exe -NoProfile -Command "Import-Module Pester -MinimumVersion 5.0; Invoke-Pester -Path '{{root}}/Update-DevTools.Tests.ps1' -Output Detailed"

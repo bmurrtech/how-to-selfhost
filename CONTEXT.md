@@ -37,14 +37,17 @@ Other `scripts/*/README.md` files are the human SoT for that subtree.
 
 | Term | Meaning | Avoid |
 |------|---------|--------|
-| **Recipe family** | Model/workload identity, e.g. `qwen3-8-flash-next` | Calling this a “package name” alone |
-| **Target** | Hardware slug, e.g. `spark`, `rtx-6000-pro` (1–8 GPUs, one node; bare-metal or in-container via coarse `EXEC_MODE`). Future: `…-multi-node` for true multi-host — **out of scope**. | Equating target with recipe family; third URL path segment; per-provider target forks |
-| **Recipe ID** | `<family>/<target>`, e.g. `qwen3-8-flash-next/spark` | Embedding version in the ID |
+| **Recipe family** | Model/workload identity, e.g. `qwen3-8-flash-next`, `orcarouter-qwen3.8-27B-uncensored-nvfp4`, `bottlecapai-thinkingcap-qwen3.8-27B-nvfp4` | Calling this a “package name” alone |
+| **Target** | Platform or hardware slug under a recipe family. Local-ai examples: `spark`, `rtx-6000-pro` (1–8 GPUs, one node; bare-metal or in-container via coarse `EXEC_MODE`; future `…-multi-node` out of scope). Patching examples: `windows`, `macos`, `linux`. | Equating target with recipe family; third URL path segment; per-provider target forks |
+| **Recipe ID** | `<family>/<target>`, e.g. `qwen3-8-flash-next/spark`, `security/vps-baseline`, `patching/windows` | Embedding version in the ID |
+| **Workstation patching** | Update-only maintenance for **already installed** developer tools via the package manager that owns them. Discover managers; never install missing apps or bootstrap missing managers; never put secrets in the Justfile. **Split entrypoints:** `Update-DevTools.ps1` (Windows) + `update-devtools.sh` (macOS/Linux), shared config/status vocabulary. Source: `scripts/patching/`. Public IDs (planned): `patching/{windows,macos,linux}`. | “Install my dev stack”; single pwsh-everywhere runtime requirement; cross-manager fallback installs; OS patching (Windows Update) as the default job |
+| **Abliterated model** | Checkpoint with safety refusal direction removed (e.g. OrcaRouter Qwen3.8-27B-Uncensored-NVFP4); research / authorized use only — see recipe README disclaimer | Treating as drop-in “safe” chat model |
+| **ThinkingCap** | BottleCap AI efficiency fine-tune of Qwen3.8-27B (gated; PolyForm Small Business + personal-use grant). Day-1 self-host SoT: NVFP4 weight-only checkpoint with MTP + FP8 KV | Confusing with OrcaRouter uncensored / flash-next PLE recipes |
 | **Release version** | Semver / prerelease for one recipe artifact, e.g. `0.0.1-rc1` | Repo-wide “latest” as the long-term resolver |
 | **Channel** | `stable` \| `beta` \| `rc` \| `nightly` (mutable → immutable version). `beta` ↔ `rc` aliases in the Worker | Treating newest GitHub release as always stable |
 | **Artifact** | Deterministic tarball + checksum, e.g. `qwen3-8-flash-next-spark-0.0.1-rc1.tar.gz` (≤2 GiB on GitHub Releases; larger → R2) | Hand-zipped dirs; weights/secrets inside |
 | **Catalog** | Git-controlled manifest: recipe → channel → version → artifact URL/sha256 | Hardcoding GitHub URLs in the Worker |
-| **Bootstrap** | Installer behind `get.mycmd.site/<project>/<recipe>[@channel\|version]`: resolve → download → verify → extract → mise → hand off to recipe | Embedding vLLM/GPU/PLE logic |
+| **Bootstrap** | Installer behind `get.mycmd.site/<project>/<recipe>[@channel\|version]`: resolve → download → verify → extract → recipe handoff. Local-ai typically continues with mise; **workstation patching** is extract-only (no mise/app-manager bootstrap). | Embedding vLLM/GPU/PLE logic; assuming every recipe installs mise |
 | **Recipe** | Independently packageable tree: `mise.toml`, `Justfile`, scripts, config, compose | Depending on unvendored `../../../shared.sh` |
 | **Mise** | Pinned CLI tools (`python`, `uv`, `just`, …) via `mise install` | Machine provisioning / Docker / NVIDIA |
 | **Just** | Human lifecycle commands | Fat logic in the Justfile (keep thin; scripts own logic) |

@@ -12,6 +12,8 @@
 #   qwen3-8-flash-next/spark
 #   qwen3-8-flash-next/rtx-6000-pro
 #   security/vps-baseline
+#   patching/windows | patching/macos | patching/linux
+#     (shared artifact: patching-devtools-<version>.tar.gz)
 #
 # Output: dist/packaging/<artifact>.tar.gz and .sha256
 set -euo pipefail
@@ -85,13 +87,19 @@ export COMPOSE_PROJECT_NAME := env_var_or_default("COMPOSE_PROJECT_NAME", "${com
 default:
 	@just --list
 
-doctor:
+mise:
+	bash scripts/ensure_mise.sh
+
+install: mise
+	mise install
+
+doctor: mise
 	bash {{RECIPE}}/scripts/doctor.sh
 
-check:
+check: mise
 	bash {{RECIPE}}/scripts/doctor.sh
 
-config *ARGS:
+config *ARGS: mise
 	bash {{RECIPE}}/scripts/config.sh {{ARGS}}
 
 probe:
@@ -115,7 +123,7 @@ logs *ARGS:
 snapshot:
 	bash {{RECIPE}}/scripts/snapshot.sh
 
-setup:
+setup: mise
 	bash {{RECIPE}}/scripts/setup.sh
 
 deploy:
@@ -286,6 +294,62 @@ EOF
 	echo "  3. Paste sha256 into catalog/recipes.json for ${recipe_id} @ ${version}"
 }
 
+# Shared tree for patching/{windows,macos,linux} — one artifact, three catalog IDs.
+pack_patching_devtools() {
+	local recipe_id="$1" version="$2"
+	local artifact stage src
+	artifact="patching-devtools-${version}.tar.gz"
+	stage="${OUT_DIR}/stage-patching-devtools-${version}"
+	src="${ROOT}/scripts/patching"
+
+	if [[ ! -d "$src" ]]; then
+		echo "error: missing scripts/patching" >&2
+		exit 1
+	fi
+	if [[ ! -f "${src}/.mycmd-extract-only" ]]; then
+		echo "error: missing scripts/patching/.mycmd-extract-only (required for bootstrap)" >&2
+		exit 1
+	fi
+
+	rm -rf "${stage}"
+	mkdir -p "${stage}/patching" "${OUT_DIR}"
+
+	tar -C "${src}" \
+		--exclude='.env' \
+		--exclude='.git' \
+		--exclude='node_modules' \
+		--exclude='__pycache__' \
+		--exclude='*.log' \
+		-cf - . | tar -C "${stage}/patching" -xf -
+
+	if find "${stage}" -name '.env' | grep -q .; then
+		echo "error: refusing to pack; .env present in stage" >&2
+		exit 1
+	fi
+
+	cat >"${stage}/patching/ARTIFACT.txt" <<EOF
+recipe_id=${recipe_id}
+version=${version}
+source=scripts/patching
+shared_for=patching/windows,patching/macos,patching/linux
+EOF
+
+	tar -C "${stage}" -czf "${OUT_DIR}/${artifact}" patching
+	sha256_file "${OUT_DIR}" "${artifact}"
+
+	echo "wrote ${OUT_DIR}/${artifact}"
+	echo "wrote ${OUT_DIR}/${artifact}.sha256"
+	cat "${OUT_DIR}/${artifact}.sha256"
+	echo
+	local tag="patching-devtools-v${version}"
+	echo "Next (HUMAN):"
+	echo "  1. Inspect: tar -tzf ${OUT_DIR}/${artifact} | less"
+	echo "  2. gh release create ${tag} ${OUT_DIR}/${artifact} ${OUT_DIR}/${artifact}.sha256 --prerelease --title ${tag}"
+	echo "  3. Paste sha256 into catalog/recipes.json for patching/{windows,macos,linux} @ ${version}"
+	echo "     (same artifact URL/sha256 for all three recipe IDs)"
+	echo "  4. Deploy bootstrap Worker if extract-only path is new on production"
+}
+
 case "$RECIPE_ID" in
 qwen3-8-flash-next/spark | qwen3-8-flash-next/rtx-6000-pro)
 	pack_qwen_local_ai "$RECIPE_ID" "$VERSION"
@@ -293,9 +357,12 @@ qwen3-8-flash-next/spark | qwen3-8-flash-next/rtx-6000-pro)
 security/vps-baseline)
 	pack_security_vps "$RECIPE_ID" "$VERSION"
 	;;
+patching/windows | patching/macos | patching/linux)
+	pack_patching_devtools "$RECIPE_ID" "$VERSION"
+	;;
 *)
 	echo "error: unsupported recipe_id: ${RECIPE_ID}" >&2
-	echo "supported: qwen3-8-flash-next/{spark,rtx-6000-pro}, security/vps-baseline" >&2
+	echo "supported: qwen3-8-flash-next/{spark,rtx-6000-pro}, security/vps-baseline, patching/{windows,macos,linux}" >&2
 	exit 1
 	;;
 esac

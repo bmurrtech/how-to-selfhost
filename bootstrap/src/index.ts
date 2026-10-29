@@ -235,6 +235,18 @@ function shellSingleQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+/** Emit a bash path that expands $HOME at runtime (do not single-quote $HOME). */
+function shellHomeAwarePath(path: string): string {
+  if (path.startsWith("$HOME")) {
+    const rest = path
+      .slice("$HOME".length)
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
+    return `"\${HOME}${rest}"`;
+  }
+  return shellSingleQuote(path);
+}
+
 function buildInstaller(args: {
   recipeId: string;
   version: string;
@@ -254,14 +266,12 @@ VERSION=${shellSingleQuote(args.version)}
 ARTIFACT_URL=${shellSingleQuote(args.url)}
 ARTIFACT_SHA256=${shellSingleQuote(args.sha256)}
 ARTIFACT_NAME=${shellSingleQuote(args.artifact)}
-DEST=${shellSingleQuote(dest)}
+DEST=${shellHomeAwarePath(dest)}
 
 echo "mycmd: installing $RECIPE_ID@$VERSION"
 
-if ! command -v mise >/dev/null 2>&1; then
-  echo "mycmd: mise not found. Install: https://mise.jdx.dev/getting-started.html" >&2
-  exit 1
-fi
+export PATH="\${HOME}/.local/bin:\${HOME}/.mise/bin:\${PATH}"
+
 if ! command -v curl >/dev/null 2>&1; then
   echo "mycmd: curl is required" >&2
   exit 1
@@ -270,6 +280,25 @@ if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1
   echo "mycmd: sha256sum or shasum is required" >&2
   exit 1
 fi
+
+ensure_mise() {
+  if command -v mise >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "mycmd: mise not found — attempting install via https://mise.run"
+  if curl -fsSL https://mise.run | sh; then
+    export PATH="\${HOME}/.local/bin:\${HOME}/.mise/bin:\${PATH}"
+  fi
+  if command -v mise >/dev/null 2>&1; then
+    echo "mycmd: mise ready → \$(command -v mise)"
+    return 0
+  fi
+  echo "mycmd: could not auto-install mise (network/policy/offline?)." >&2
+  echo "mycmd: install manually, then re-run this bootstrap:" >&2
+  echo "  curl -fsSL https://mise.run | sh" >&2
+  echo '  export PATH="$HOME/.local/bin:$PATH"' >&2
+  exit 1
+}
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -293,7 +322,25 @@ mkdir -p "$DEST"
 tar -xzf "$ARCHIVE" -C "$DEST" --strip-components=1
 cd "$DEST"
 
-echo "mycmd: mise install"
+# Extract-only recipes (e.g. workstation patching): no mise / just bootstrap.
+if [[ -f .mycmd-extract-only ]]; then
+  echo "mycmd: extract-only recipe — skipping mise"
+  if [[ -f scripts/check.sh ]]; then
+    bash scripts/check.sh
+  fi
+  echo "mycmd: done → $DEST"
+  echo "mycmd: next: see README.md (OS entrypoint; just optional if already installed)"
+  exit 0
+fi
+
+# Prefer recipe-local guard when present (same UX offline of bootstrap).
+if [[ -f scripts/ensure_mise.sh ]]; then
+  bash scripts/ensure_mise.sh
+else
+  ensure_mise
+fi
+
+echo "mycmd: mise install (operator tools only — not CUDA/vLLM/weights)"
 mise install
 
 if command -v just >/dev/null 2>&1 || mise which just >/dev/null 2>&1; then
