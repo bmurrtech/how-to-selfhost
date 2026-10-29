@@ -190,6 +190,9 @@ ops_config_show() {
 		echo "RunPod pod:             ${RUNPOD_POD_ID}"
 		echo "RunPod GPU count env:   ${RUNPOD_GPU_COUNT:-unset}"
 	fi
+	if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+		local_ai_resolve_hf_token
+	fi
 	echo "VLLM_API_KEY:           $([[ -n "${VLLM_API_KEY:-}" ]] && echo present || echo absent)"
 	echo "HF_TOKEN:               $([[ -n "${HF_TOKEN:-}" ]] && echo present || echo absent)"
 	if [[ -n "$src" && -f "$src" ]]; then

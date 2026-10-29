@@ -10,16 +10,24 @@ export COMPOSE_PROJECT_NAME := env_var_or_default("COMPOSE_PROJECT_NAME", "qwen3
 default:
 	@just --list
 
+# Install mise when missing (operator tools only — not CUDA/vLLM/weights)
+mise:
+	bash scripts/ensure_mise.sh
+
+# mise + mise install (pinned Justfile tools)
+install: mise
+	mise install
+
 # --- daily loop ---
 
-doctor:
+doctor: mise
 	bash {{RECIPE}}/scripts/doctor.sh
 
 # Alias kept for bootstrap installer + older docs
-check:
+check: mise
 	bash {{RECIPE}}/scripts/doctor.sh
 
-config *ARGS:
+config *ARGS: mise
 	bash {{RECIPE}}/scripts/config.sh {{ARGS}}
 
 probe:
@@ -47,7 +55,7 @@ snapshot:
 
 # --- lifecycle ---
 
-setup:
+setup: mise
 	bash {{RECIPE}}/scripts/setup.sh
 
 deploy:

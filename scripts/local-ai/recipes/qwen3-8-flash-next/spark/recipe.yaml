@@ -22,3 +22,12 @@ runtime:
 deployment:
   strategy: ple-mmap
   served_model_name: qwen3.8-flash-next
+  # Validated 1× Spark production capacity (see config/serve.env + README.md)
+  max_model_len: 65536
+  max_num_seqs: 2
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.75
+  prefix_caching: true
+  mtp: false
+  client_context: 65536
+  client_output: 16384

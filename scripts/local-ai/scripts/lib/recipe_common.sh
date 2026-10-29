@@ -43,6 +43,8 @@ recipe_bootstrap() {
 	export CONTAINER_NAME="$NAME"
 	export PORT="${PORT:-${HOST_PORT:-8000}}"
 	export HOST_PORT="$PORT"
+	# Fallbacks are conservative (shared by Spark + RTX). Spark production
+	# knobs live in recipes/.../spark/config/serve.env (CTX=65536, PREFIX_CACHE=1).
 	export CTX="${CTX:-${MAX_MODEL_LEN:-16384}}"
 	export SEQS="${SEQS:-${MAX_NUM_SEQS:-2}}"
 	export GPU_MEM="${GPU_MEM:-${GPU_MEM_UTIL:-0.75}}"
@@ -52,7 +54,7 @@ recipe_bootstrap() {
 	export FLASH_REPO_URL="${FLASH_REPO_URL:-https://github.com/blazux/qwen3.8-Flash-DGX.git}"
 	export FLASH_REPO_REF="${FLASH_REPO_REF:-c57881509af3dad83a28e59662fe3c4d29381628}"
 	export VLLM_IMAGE="${VLLM_IMAGE:-vllm/vllm-openai:qwen38-flash-next}"
-	export READY_TIMEOUT_SEC="${READY_TIMEOUT_SEC:-900}"
+	export READY_TIMEOUT_SEC="${READY_TIMEOUT_SEC:-1800}"
 	export READY_POLL_SEC="${READY_POLL_SEC:-5}"
 	export BASE_URL="${BASE_URL:-http://127.0.0.1:${PORT}}"
 	export BENCH_DIR="${BENCH_DIR:-${HOME}/qwen38-bench}"

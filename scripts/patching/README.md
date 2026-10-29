@@ -19,7 +19,7 @@ curl -fsSL "https://get.mycmd.site/patching/macos@beta" | bash
 curl -fsSL "https://get.mycmd.site/patching/linux@beta" | bash
 ```
 
-`@beta` → catalog `rc` → **`0.1.0-rc1`** (shared artifact `patching-devtools-0.1.0-rc1.tar.gz`). Until the GitHub Release ships and catalog `sha256` leaves `PENDING_RELEASE`, the Worker returns **503** — use a local clone. Architecture: [`CONTEXT.md`](../../CONTEXT.md). Packaging: [`scripts/packaging/README.md`](../packaging/README.md).
+`@beta` → catalog `rc` → **`0.1.0-rc1`** (shared artifact `patching-devtools-0.1.0-rc1.tar.gz`; release tag `patching-devtools-v0.1.0-rc1`). Architecture: [`CONTEXT.md`](../../CONTEXT.md). Packaging: [`scripts/packaging/README.md`](../packaging/README.md).
 
 After install (default root `$HOME/mycmd/patching/<target>`):
 

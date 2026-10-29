@@ -16,6 +16,8 @@ Then (human): create the GitHub Release, paste sha256 into `catalog/recipes.json
 |-----------|-------------|------------------------|
 | `qwen3-8-flash-next/spark` | `scripts/local-ai/` (spark only) | `v<version>` |
 | `qwen3-8-flash-next/rtx-6000-pro` | `scripts/local-ai/` (rtx only) | `v<version>` (same tag may hold both local-ai assets) |
+| `bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/{spark,rtx-6000-pro}` | `scripts/local-ai/` (one target each) | `v<version>` |
+| `orcarouter-qwen3.8-27B-uncensored-nvfp4/spark` | `scripts/local-ai/` (spark only) | `v<version>` |
 | `security/vps-baseline` | `scripts/security/` (excludes `archive/`) | `security-vps-baseline-v<version>` |
 | `patching/{windows,macos,linux}` | `scripts/patching/` (shared artifact) | `patching-devtools-v<version>` |
 

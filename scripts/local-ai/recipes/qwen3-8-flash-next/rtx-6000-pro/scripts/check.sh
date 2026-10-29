@@ -28,6 +28,11 @@ fail() {
 }
 skip() { printf '[SKIP] %-22s %s\n' "$1" "${2:-}"; }
 
+# Secrets presence (never print values)
+if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+	local_ai_resolve_hf_token
+fi
+
 mode="$(rtx_detect_exec_mode)"
 echo "=== doctor / check ==="
 echo "Qwen3-8-Flash-Next / RTX PRO 6000"
@@ -40,21 +45,77 @@ ops_warn() { warn "$1" "$2"; }
 ops_fail() { fail "$1" "$2"; }
 ops_skip() { skip "$1" "$2"; }
 
-# Workspace / RunPod volume ergonomics
-if [[ -d /workspace ]]; then
-	if [[ -w /workspace ]]; then
+# Fail closed on unpinned :latest (wrong image for Qwen3.8 PLE path)
+img="${IMAGE:-${VLLM_IMAGE:-}}"
+case "$img" in
+vllm/vllm-openai:latest | *:latest)
+	fail "Runtime image" "${img} — refuse :latest; use vllm/vllm-openai:qwen38-flash-next (or a pinned digest)"
+	;;
+*qwen38-flash-next*)
+	pass "Runtime image" "$img"
+	;;
+"")
+	warn "Runtime image" "unset (default at deploy: vllm/vllm-openai:qwen38-flash-next)"
+	;;
+*)
+	warn "Runtime image" "${img} — expected vllm/vllm-openai:qwen38-flash-next"
+	;;
+esac
+
+# Workspace / RunPod volume ergonomics (after rtx_prefer_volume_cache)
+effective_root="$(rtx_resolved_volume_root 2>/dev/null || true)"
+if [[ -n "$effective_root" ]]; then
+	if [[ -n "${RTX_VOLUME_ROOT:-}" && "$effective_root" == "${RTX_VOLUME_ROOT}" ]]; then
+		pass "Volume root" "RTX_VOLUME_ROOT=${RTX_VOLUME_ROOT} (HF_CACHE=${HF_CACHE:-unset})"
+	elif [[ "$effective_root" == /workspace ]]; then
 		if [[ -n "${RUNPOD_POD_ID:-}" ]]; then
-			pass "Workspace" "/workspace writable (RunPod pod ${RUNPOD_POD_ID})"
+			pass "Workspace" "/workspace writable (RunPod pod ${RUNPOD_POD_ID}; HF_CACHE=${HF_CACHE:-unset})"
 		else
-			pass "Workspace" "/workspace writable"
+			pass "Workspace" "/workspace writable (HF_CACHE=${HF_CACHE:-unset})"
 		fi
 	else
-		warn "Workspace" "/workspace exists but not writable"
+		pass "Volume" "${effective_root} present (HF_CACHE=${HF_CACHE:-unset})"
 	fi
+elif [[ -n "${RTX_VOLUME_ROOT:-}" ]]; then
+	warn "RTX_VOLUME_ROOT" "set to ${RTX_VOLUME_ROOT} but missing or not writable"
 elif [[ -n "${RUNPOD_POD_ID:-}" ]]; then
-	warn "Workspace" "RUNPOD_POD_ID set but /workspace missing"
-elif [[ -d /runpod-volume ]]; then
-	pass "Volume" "/runpod-volume present (HF_CACHE=${HF_CACHE})"
+	warn "Workspace" "RUNPOD_POD_ID set but no writable RTX_VOLUME_ROOT|/workspace|/runpod-volume — caches may fill container disk"
+fi
+if [[ -n "${RUNPOD_POD_ID:-}" && -z "$effective_root" && -z "${HF_CACHE:-}" ]]; then
+	warn "Cache disk" "no volume root and HF_CACHE unset — prefer volume ≥200GB or RTX_VOLUME_ROOT"
+fi
+# Opt-in only: do not auto-detect global FUSE mounts as cache root
+if [[ -z "${RTX_VOLUME_ROOT:-}" && -d /workspace-global ]]; then
+	warn "RTX_VOLUME_ROOT" "/workspace-global present but unset — opt-in with RTX_VOLUME_ROOT=/workspace-global for FUSE weight persistence"
+fi
+
+# geesefs / FUSE: snapshot lstat 0-byte stubs while blobs are OK
+if declare -F snapshot_dir >/dev/null 2>&1; then
+	_snap=""
+	_snap="$(snapshot_dir 2>/dev/null || true)"
+	if [[ -n "$_snap" && -d "$_snap" ]]; then
+		_stub=0
+		_blob_ok=0
+		while IFS= read -r -d '' _f; do
+			_sz="$(stat -c%s "$_f" 2>/dev/null || echo 0)"
+			if [[ "$_sz" == "0" ]]; then
+				_stub=1
+				_real="$(readlink -f "$_f" 2>/dev/null || true)"
+				if [[ -n "$_real" && -f "$_real" ]]; then
+					_rsz="$(stat -c%s "$_real" 2>/dev/null || echo 0)"
+					[[ "$_rsz" != "0" ]] && _blob_ok=1
+				fi
+			fi
+		done < <(
+			find "$_snap" -maxdepth 1 -type f -print0 2>/dev/null
+			find "$_snap" -maxdepth 1 -type l -print0 2>/dev/null
+		)
+		if [[ "$_stub" -eq 1 && "$_blob_ok" -eq 1 ]]; then
+			warn "HF FUSE cache" "snapshot paths lstat 0-byte while blobs have size (geesefs stub/symlink flakiness) — prefer local metadata copy or re-hydrate"
+		elif [[ "$_stub" -eq 1 ]]; then
+			warn "HF FUSE cache" "snapshot files lstat 0-byte under ${_snap}"
+		fi
+	fi
 fi
 
 # Port in use?
@@ -86,6 +147,11 @@ printf '  CTX=%s SEQS=%s GPU_MEM=%s TP=%s\n' "${CTX:-}" "${SEQS:-}" "${GPU_MEM:-
 printf '  HF_CACHE=%s\n' "${HF_CACHE:-}"
 printf '  VLLM_CACHE_ROOT=%s\n' "${VLLM_CACHE_ROOT:-unset}"
 printf '  QUANTIZATION=%s\n' "${QUANTIZATION:-modelopt}"
+printf '  PLE_MODE=%s VLLM_PLE_CPU_OFFLOAD=%s\n' "${PLE_MODE:-n/a}" "${VLLM_PLE_CPU_OFFLOAD:-0}"
+printf '  HF_TOKEN=%s\n' "$([[ -n "${HF_TOKEN:-}" ]] && echo present || echo absent)"
+if [[ "${TENSOR_PARALLEL_SIZE:-1}" == "1" || "${PROFILE_ID:-}" == "gpu-1" ]]; then
+	warn "1× PLE" "use VLLM_PLE_CPU_OFFLOAD on qwen38-flash-next (not :latest); ~95GiB ngram OOM means wrong PLE path — do not use generic --cpu-offload-gb"
+fi
 echo
 
 # 1) Compatible hardware
@@ -179,9 +245,12 @@ for t in just jq; do
 	if command -v "$t" >/dev/null 2>&1; then
 		pass "Tool:$t" "$(command -v "$t")"
 	else
-		warn "Tool:$t" "missing (mise install — optional if already present)"
+		warn "Tool:$t" "missing — run: bash scripts/ensure_mise.sh && mise install"
 	fi
 done
+if ! command -v mise >/dev/null 2>&1; then
+	warn "mise" "missing — bash scripts/ensure_mise.sh (or: curl -fsSL https://mise.run | sh)"
+fi
 
 if weights_complete >/tmp/local-ai-weights-check.txt 2>&1; then
 	pass "Model cache" "weights complete"

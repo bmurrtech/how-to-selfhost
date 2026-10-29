@@ -1,0 +1,28 @@
+schema: 1
+
+recipe:
+  name: bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/rtx-6000-pro
+  version: 0.0.1-rc1
+
+model:
+  id: bottlecapai/ThinkingCap-Qwen3.8-27B-NVFP4
+  family: bottlecapai-thinkingcap-qwen3.8-27B-nvfp4
+
+hardware:
+  host: rtx-6000-pro
+  topology: single
+
+runtime:
+  engine: vllm
+  mode: container
+  image: ghcr.io/styles01/qwen38-mtp3:latest
+
+deployment:
+  strategy: dense
+  served_model_name: ThinkingCap-Qwen3.8-27B
+  max_model_len: 262144
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.75
+  prefix_caching: true
+  mtp: 3

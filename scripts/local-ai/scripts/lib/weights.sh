@@ -36,10 +36,37 @@ file_bytes() {
 	fi
 }
 
+# Print unique model-NNNN-of-MMMM.safetensors names from a safetensors index.json.
+# Prefer Python JSON parse — grepping huge weight_maps (100k+ entries) over FUSE is flaky.
+weights_index_shard_names() {
+	local idx="$1"
+	if command -v python3 >/dev/null 2>&1; then
+		python3 - "$idx" <<'PY'
+import json, re, sys
+path = sys.argv[1]
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+    sys.stderr.write(f"status: index parse failed: {e}\n")
+    sys.exit(2)
+wm = data.get("weight_map") or {}
+pat = re.compile(r"^model-\d+-of-\d+\.safetensors$")
+shards = sorted({v for v in wm.values() if isinstance(v, str) and pat.match(v)})
+for s in shards:
+    print(s)
+PY
+		return $?
+	fi
+	# Fallback: force text mode; unique via sort -u
+	grep -aoE 'model-[0-9]+-of-[0-9]+\.safetensors' "$idx" | sort -u
+}
+
 # Returns 0 if local weights look complete enough to skip download.
 weights_complete() {
 	local snap incomplete expected_count missing found name sz idx
 	local fsz dsz stem final f
+	local -a shard_names=()
 	snap="$(snapshot_dir 2>/dev/null)" || {
 		echo "status: no snapshot under $(model_cache_dir)"
 		return 1
@@ -78,10 +105,14 @@ weights_complete() {
 
 	missing=0
 	if [[ -n "$idx" ]]; then
-		local -a shard_names=()
-		mapfile -t shard_names < <(grep -oE 'model-[0-9]+-of-[0-9]+\.safetensors' "$idx" | sort -u)
+		mapfile -t shard_names < <(weights_index_shard_names "$idx" || true)
+		# Drop empty last element if any
+		if [[ ${#shard_names[@]} -gt 0 && -z "${shard_names[-1]:-}" ]]; then
+			unset 'shard_names[-1]'
+		fi
 		expected_count="${#shard_names[@]}"
 		for name in "${shard_names[@]}"; do
+			[[ -n "$name" ]] || continue
 			if [[ ! -e "$snap/$name" ]]; then
 				echo "status: missing shard $name"
 				missing=$((missing + 1))
@@ -118,6 +149,9 @@ hf_docker_env() {
 		-e HF_HUB_DOWNLOAD_TIMEOUT="${HF_HUB_DOWNLOAD_TIMEOUT:-300}"
 		-e HF_HUB_ETAG_TIMEOUT="${HF_HUB_DOWNLOAD_TIMEOUT:-300}"
 	)
+	if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+		local_ai_resolve_hf_token
+	fi
 	if [[ -n "${HF_TOKEN:-}" ]]; then
 		HF_DL_ENV+=(-e HF_TOKEN="$HF_TOKEN" -e HUGGING_FACE_HUB_TOKEN="$HF_TOKEN")
 		echo "auth: HF_TOKEN set"
@@ -184,6 +218,9 @@ run_download_native() {
 
 	mkdir -p "$HF_CACHE"
 	export HF_HOME="${HF_HOME:-$HF_CACHE}"
+	if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+		local_ai_resolve_hf_token
+	fi
 	if [[ -n "${HF_TOKEN:-}" ]]; then
 		export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
 		echo "auth: HF_TOKEN set"

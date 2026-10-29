@@ -57,16 +57,18 @@ Other `scripts/*/README.md` files are the human SoT for that subtree.
 
 ## Current milestone
 
-**Channel `rc` / public `@beta`:** `0.0.1-rc2` for Qwen local-ai targets (immutable GitHub Release tag `v0.0.1-rc2`). Prior spark `0.0.1-rc1` remains available by pin.
+**Channel `rc` / public `@beta`:** cutting **`0.1.0-rc1`** (prerelease). Flash-next stays on `0.0.1-rc2` until a later bump; new families and patching use `0.1.0-rc1`.
 
-| Recipe ID | Artifact (rc2) |
-|-----------|----------------|
-| `qwen3-8-flash-next/spark` | `qwen3-8-flash-next-spark-0.0.1-rc2.tar.gz` |
-| `qwen3-8-flash-next/rtx-6000-pro` | `qwen3-8-flash-next-rtx-6000-pro-0.0.1-rc2.tar.gz` |
+| Recipe ID | Channel rc → | Release tag |
+|-----------|--------------|-------------|
+| `qwen3-8-flash-next/{spark,rtx-6000-pro}` | `0.0.1-rc2` | `v0.0.1-rc2` |
+| `bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/{spark,rtx-6000-pro}` | `0.1.0-rc1` | `v0.1.0-rc1` |
+| `orcarouter-qwen3.8-27B-uncensored-nvfp4/spark` | `0.1.0-rc1` | `v0.1.0-rc1` |
+| `patching/{windows,macos,linux}` | `0.1.0-rc1` | `patching-devtools-v0.1.0-rc1` |
 
-Public URLs: `https://get.mycmd.site/<recipe-id>@beta` → catalog `rc` → above versions. Source trees under [`scripts/local-ai/recipes/qwen3-8-flash-next/`](scripts/local-ai/recipes/qwen3-8-flash-next/). Ops: [`scripts/local-ai/README.md`](scripts/local-ai/README.md).
+Public URLs: `https://get.mycmd.site/<recipe-id>@beta` → catalog `rc`. Ops: [`scripts/local-ai/README.md`](scripts/local-ai/README.md), [`scripts/patching/README.md`](scripts/patching/README.md).
 
-**Topology note:** `rtx-6000-pro` covers **single-node** 1–8 GPUs with coarse `docker` vs `native` execution (upstream `vllm/vllm-openai:qwen38-flash-next` — no project Docker Hub image). A future **`multi-node`** target is reserved; not shipped.
+**Topology note:** `rtx-6000-pro` covers **single-node** 1–8 GPUs with coarse `docker` vs `native` execution. A future **`multi-node`** target is reserved; not shipped.
 
 **Also packaged (separate):** `security/vps-baseline` → `security-vps-baseline-0.0.1-rc1.tar.gz` (sha256 in catalog; release tag `security-vps-baseline-v0.0.1-rc1`). Source: [`scripts/security/`](scripts/security/).
 

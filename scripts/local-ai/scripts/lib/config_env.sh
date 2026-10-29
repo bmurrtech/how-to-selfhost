@@ -165,11 +165,21 @@ config_env_ensure() {
 	fi
 
 	# --- HF_TOKEN: env/Secret wins; never copy from env into .env ---
+	# Resolve aliases (HUGGING_FACE_HUB_TOKEN / RUNPOD_SECRET_HF_TOKEN) first.
+	if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+		local_ai_resolve_hf_token
+	fi
 	if [[ -n "${HF_TOKEN:-}" ]]; then
-		CONFIG_ENV_HF_SOURCE=environment
-		echo "HF_TOKEN: provided by environment"
+		CONFIG_ENV_HF_SOURCE="${CONFIG_ENV_HF_SOURCE:-environment}"
+		if [[ "${CONFIG_ENV_HF_SOURCE}" == "dotenv" ]]; then
+			echo "HF_TOKEN: preserved"
+		else
+			CONFIG_ENV_HF_SOURCE=environment
+			echo "HF_TOKEN: provided by environment (not copied into .env)"
+		fi
 	elif file_key="$(_config_env_get HF_TOKEN || true)" && [[ -n "$file_key" ]]; then
 		export HF_TOKEN="$file_key"
+		export HUGGING_FACE_HUB_TOKEN="$file_key"
 		CONFIG_ENV_HF_SOURCE=dotenv
 		echo "HF_TOKEN: preserved"
 	elif [[ "$prompt_hf" == "1" && -t 0 ]]; then
@@ -180,6 +190,7 @@ config_env_ensure() {
 		if [[ -n "$hf" ]]; then
 			_config_env_upsert HF_TOKEN "$hf"
 			export HF_TOKEN="$hf"
+			export HUGGING_FACE_HUB_TOKEN="$hf"
 			CONFIG_ENV_HF_SOURCE=dotenv
 			echo "HF_TOKEN: set"
 		else
@@ -197,6 +208,15 @@ config_env_ensure() {
 		if [[ "${CONFIG_ENV_KEY_SOURCE}" == "generated" || "${CONFIG_ENV_KEY_SOURCE}" == "dotenv" ]]; then
 			file_key="$(_config_env_get VLLM_API_KEY || true)"
 			[[ -n "$file_key" ]] && export VLLM_API_KEY="$file_key"
+		fi
+		# Re-assert HF after load_env (empty .env must not clobber Secret).
+		if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+			local_ai_resolve_hf_token
+		fi
+		if [[ -n "${HF_TOKEN:-}" && -z "${CONFIG_ENV_HF_SOURCE:-}" ]]; then
+			CONFIG_ENV_HF_SOURCE=environment
+		elif [[ -z "${HF_TOKEN:-}" ]]; then
+			CONFIG_ENV_HF_SOURCE=absent
 		fi
 	fi
 }
@@ -244,8 +264,18 @@ config_env_summary() {
 	echo "=== config summary ==="
 	[[ -n "$mode" ]] && echo "Exec mode:     ${mode}"
 	echo "Workspace:     ${ws}"
+	if declare -F local_ai_resolve_hf_token >/dev/null 2>&1; then
+		local_ai_resolve_hf_token
+		hf_src="${CONFIG_ENV_HF_SOURCE:-absent}"
+	fi
+	if [[ -n "${HF_TOKEN:-}" ]]; then
+		hf_src="${hf_src:-present}"
+		[[ "$hf_src" == "absent" || "$hf_src" == "unknown" ]] && hf_src=present
+	else
+		hf_src=absent
+	fi
 	echo "VLLM_API_KEY:  ${key_src} (value not shown)"
-	echo "HF_TOKEN:      ${hf_src}"
+	echo "HF_TOKEN:      ${hf_src} (value not shown)"
 	echo "HF_CACHE:      ${HF_CACHE:-unset}"
 	echo "HF_HOME:       ${HF_HOME:-${HF_CACHE:-unset}}"
 	echo "VLLM_CACHE_ROOT: ${VLLM_CACHE_ROOT:-unset}"

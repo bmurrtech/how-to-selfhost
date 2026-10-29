@@ -8,17 +8,43 @@ Format inspired by [Keep a Changelog](https://keepachangelog.com/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.1.0-rc1] — 2026-10-28
+
+### Added
+
+- Recipe family `bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/{spark,rtx-6000-pro}` — ThinkingCap NVFP4 dense serve (MTP=3, FP8 KV, gated HF); Spark e2e probe green.
+- Recipe `orcarouter-qwen3.8-27B-uncensored-nvfp4/spark` — abliterated NVFP4 dense serve (research / authorized use).
 - Recipe family `patching/{windows,macos,linux}` — update-only workstation maintenance (`scripts/patching/`); shared artifact `patching-devtools-0.1.0-rc1.tar.gz`; extract-only bootstrap (`.mycmd-extract-only`); ADR 0002.
 - Bootstrap Worker: skip mise/`just` when recipe ships `.mycmd-extract-only`; download/verify before mise for all recipes.
-- Packaging: `package-recipe.sh` supports `patching/{windows,macos,linux}`.
+- Packaging: `package-recipe.sh` supports bottlecap spark/rtx, orcarouter spark, and `patching/{windows,macos,linux}`.
+- Local-ai: Kilo Code client notes in `scripts/local-ai/README.md` (openai-compatible map key = served model id).
 
 ### Changed
 
+- Local-ai Just recipes: `ensure-mise` / `install-tools` → `mise` / `install`.
+- Probe: ThinkingCap defaults to thinking-off (`PROBE_ENABLE_THINKING=0`) with reasoning fallback in `ops_probe.sh`.
 - Agent scaffold: ADR home `docs/ADRs/` → `docs/adr/` (bmurrtech); OKF `knowledge/` stub; PRDs stay gitignored under `docs/prd/` (setup **A**); `.scratch/` + `CLAUDE.md` pointer.
 
 ### Notes
 
-- **patching 0.1.0-rc1** not published yet: catalog `sha256` is `PENDING_RELEASE` → `get.mycmd.site/patching/*@beta` returns **503** until GitHub Release `patching-devtools-v0.1.0-rc1` + catalog sha256 + Worker deploy. Local: `bash scripts/packaging/package-recipe.sh patching/windows 0.1.0-rc1`.
+- Local-ai assets ship under GitHub Release tag **`v0.1.0-rc1`** (prerelease). Patching ships under **`patching-devtools-v0.1.0-rc1`** (separate tag; same catalog version).
+- **Immutable:** once tags ship, never replace assets — bump rc instead.
+- Gated weights / HF token required for ThinkingCap; not packaged in artifacts.
+
+### Artifacts
+
+| Recipe | Artifact | SHA-256 |
+|--------|----------|---------|
+| bottlecap spark | `bottlecapai-thinkingcap-qwen3.8-27B-nvfp4-spark-0.1.0-rc1.tar.gz` | `befe63a17e21103cdca84b47974a1efa13719c77894fe13d122637cd4d446c06` |
+| bottlecap rtx | `bottlecapai-thinkingcap-qwen3.8-27B-nvfp4-rtx-6000-pro-0.1.0-rc1.tar.gz` | `ebeaf05bcddf54be48549712f0219e2f755e2f69749cf5c74b280bc98daa6ca5` |
+| orcarouter spark | `orcarouter-qwen3.8-27B-uncensored-nvfp4-spark-0.1.0-rc1.tar.gz` | `8eda776d8698c63284d163057c9ed9cedc5c42b84fa8a37d4815d181db55ef4a` |
+| patching (shared) | `patching-devtools-0.1.0-rc1.tar.gz` | `c22cf5224234cc117937518a49846e28201fc901315bb07b9ed8233614f31b29` |
+
+Installer / URL contract: [`guides/how-to_distro_cloudflare_github.md`](guides/how-to_distro_cloudflare_github.md). Ops: [`scripts/local-ai/README.md`](scripts/local-ai/README.md), [`scripts/patching/README.md`](scripts/patching/README.md).
 
 ## [0.0.1-rc2] — 2026-09-15
 

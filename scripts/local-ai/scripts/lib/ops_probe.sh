@@ -39,11 +39,19 @@ ops_probe_run() {
 	echo "HTTP /v1/models:       200"
 
 	# Streaming request: TTFT = time to first SSE data payload; total = full stream.
-	local body
-	body="$(jq -nc \
-		--arg m "$model" \
-		--arg p "$prompt" \
-		'{model:$m, messages:[{role:"user",content:$p}], max_tokens:16, temperature:0, stream:true}')"
+	# PROBE_ENABLE_THINKING=0 → chat_template_kwargs.enable_thinking=false (ThinkingCap / Qwen3).
+	local body thinking="${PROBE_ENABLE_THINKING:-1}"
+	if [[ "$thinking" == "0" ]]; then
+		body="$(jq -nc \
+			--arg m "$model" \
+			--arg p "$prompt" \
+			'{model:$m, messages:[{role:"user",content:$p}], max_tokens:32, temperature:0, stream:true, chat_template_kwargs:{enable_thinking:false}}')"
+	else
+		body="$(jq -nc \
+			--arg m "$model" \
+			--arg p "$prompt" \
+			'{model:$m, messages:[{role:"user",content:$p}], max_tokens:16, temperature:0, stream:true}')"
+	fi
 
 	t0="$(date +%s%N)"
 	set +e
@@ -63,6 +71,10 @@ ops_probe_run() {
 			return 1
 		fi
 		piece="$(printf '%s' "$line" | jq -r '.choices[0].delta.content // empty' 2>/dev/null || true)"
+		# Reasoning-only models (ThinkingCap) may stream into reasoning_content first.
+		if [[ -z "$piece" ]]; then
+			piece="$(printf '%s' "$line" | jq -r '.choices[0].delta.reasoning_content // .choices[0].delta.reasoning // empty' 2>/dev/null || true)"
+		fi
 		if [[ -n "$piece" ]]; then
 			# TTFT = first content token, not empty/role-only chunks
 			if [[ -z "$ttft_ms" ]]; then

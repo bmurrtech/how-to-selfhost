@@ -1,0 +1,61 @@
+# Dense vLLM serve for bottlecapai-thinkingcap-qwen3.8-27B-nvfp4 / spark (no PLE mmap).
+# Values from .runtime.env via --env-file.
+
+name: ${COMPOSE_PROJECT_NAME:-bottlecap-thinkingcap-spark}
+
+services:
+  vllm:
+    image: ${IMAGE}
+    container_name: ${NAME}
+    restart: unless-stopped
+    gpus: all
+    ipc: host
+    shm_size: ${SHM_SIZE:-16g}
+    ports:
+      - "${PORT}:8000"
+    volumes:
+      - ${HF_CACHE}:/hf
+    env_file:
+      - .runtime.env
+    environment:
+      HF_HOME: /hf
+      HF_HUB_OFFLINE: "1"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        args=(
+          "$${SNAP_IN}"
+          --served-model-name "$${SERVED_MODEL_NAME:-ThinkingCap-Qwen3.8-27B}"
+          --host 0.0.0.0
+          --port 8000
+          --load-format safetensors
+          --max-model-len "$${CTX}"
+          --max-num-seqs "$${SEQS}"
+          --gpu-memory-utilization "$${GPU_MEM}"
+          "$${PREFIX_CACHE_ARG}"
+          --enable-chunked-prefill
+          --max-num-batched-tokens "$${MAX_NUM_BATCHED_TOKENS}"
+          --trust-remote-code
+          --enable-auto-tool-choice
+          --tool-call-parser qwen3_coder
+          --reasoning-parser qwen3
+        )
+        if [[ -n "$${KV_DTYPE:-}" ]]; then
+          args+=(--kv-cache-dtype "$${KV_DTYPE}")
+        fi
+        if [[ -n "$${SPEC_JSON:-}" ]]; then
+          args+=(--speculative-config "$${SPEC_JSON}")
+        fi
+        if [[ -n "$${VLLM_API_KEY:-}" ]]; then
+          args+=(--api-key "$${VLLM_API_KEY}")
+        fi
+        if [[ -n "$${EXTRA_ARGS:-}" ]]; then
+          # shellcheck disable=SC2206
+          extra=( $${EXTRA_ARGS} )
+          args+=("$${extra[@]}")
+        fi
+        if command -v vllm >/dev/null 2>&1; then
+          exec vllm serve "$${args[@]}"
+        fi
+        exec python3 -m vllm.entrypoints.openai.api_server "$${args[@]}"

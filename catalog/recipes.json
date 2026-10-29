@@ -30,6 +30,42 @@
         }
       }
     },
+    "bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/spark": {
+      "channels": {
+        "rc": "0.1.0-rc1"
+      },
+      "versions": {
+        "0.1.0-rc1": {
+          "artifact": "bottlecapai-thinkingcap-qwen3.8-27B-nvfp4-spark-0.1.0-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.1.0-rc1/bottlecapai-thinkingcap-qwen3.8-27B-nvfp4-spark-0.1.0-rc1.tar.gz",
+          "sha256": "befe63a17e21103cdca84b47974a1efa13719c77894fe13d122637cd4d446c06"
+        }
+      }
+    },
+    "bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/rtx-6000-pro": {
+      "channels": {
+        "rc": "0.1.0-rc1"
+      },
+      "versions": {
+        "0.1.0-rc1": {
+          "artifact": "bottlecapai-thinkingcap-qwen3.8-27B-nvfp4-rtx-6000-pro-0.1.0-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.1.0-rc1/bottlecapai-thinkingcap-qwen3.8-27B-nvfp4-rtx-6000-pro-0.1.0-rc1.tar.gz",
+          "sha256": "ebeaf05bcddf54be48549712f0219e2f755e2f69749cf5c74b280bc98daa6ca5"
+        }
+      }
+    },
+    "orcarouter-qwen3.8-27B-uncensored-nvfp4/spark": {
+      "channels": {
+        "rc": "0.1.0-rc1"
+      },
+      "versions": {
+        "0.1.0-rc1": {
+          "artifact": "orcarouter-qwen3.8-27B-uncensored-nvfp4-spark-0.1.0-rc1.tar.gz",
+          "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/v0.1.0-rc1/orcarouter-qwen3.8-27B-uncensored-nvfp4-spark-0.1.0-rc1.tar.gz",
+          "sha256": "8eda776d8698c63284d163057c9ed9cedc5c42b84fa8a37d4815d181db55ef4a"
+        }
+      }
+    },
     "security/vps-baseline": {
       "channels": {
         "rc": "0.0.1-rc1"
@@ -50,7 +86,7 @@
         "0.1.0-rc1": {
           "artifact": "patching-devtools-0.1.0-rc1.tar.gz",
           "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/patching-devtools-v0.1.0-rc1/patching-devtools-0.1.0-rc1.tar.gz",
-          "sha256": "PENDING_RELEASE"
+          "sha256": "c22cf5224234cc117937518a49846e28201fc901315bb07b9ed8233614f31b29"
         }
       }
     },
@@ -62,7 +98,7 @@
         "0.1.0-rc1": {
           "artifact": "patching-devtools-0.1.0-rc1.tar.gz",
           "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/patching-devtools-v0.1.0-rc1/patching-devtools-0.1.0-rc1.tar.gz",
-          "sha256": "PENDING_RELEASE"
+          "sha256": "c22cf5224234cc117937518a49846e28201fc901315bb07b9ed8233614f31b29"
         }
       }
     },
@@ -74,7 +110,7 @@
         "0.1.0-rc1": {
           "artifact": "patching-devtools-0.1.0-rc1.tar.gz",
           "url": "https://github.com/bmurrtech/how-to-selfhost/releases/download/patching-devtools-v0.1.0-rc1/patching-devtools-0.1.0-rc1.tar.gz",
-          "sha256": "PENDING_RELEASE"
+          "sha256": "c22cf5224234cc117937518a49846e28201fc901315bb07b9ed8233614f31b29"
         }
       }
     }

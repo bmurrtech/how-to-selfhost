@@ -11,6 +11,9 @@
 # Supported recipe IDs:
 #   qwen3-8-flash-next/spark
 #   qwen3-8-flash-next/rtx-6000-pro
+#   bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/spark
+#   bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/rtx-6000-pro
+#   orcarouter-qwen3.8-27B-uncensored-nvfp4/spark
 #   security/vps-baseline
 #   patching/windows | patching/macos | patching/linux
 #     (shared artifact: patching-devtools-<version>.tar.gz)
@@ -70,6 +73,9 @@ compose_name_for() {
 	case "$1" in
 	qwen3-8-flash-next/spark) echo "qwen38-spark" ;;
 	qwen3-8-flash-next/rtx-6000-pro) echo "qwen38-rtx" ;;
+	bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/spark) echo "bottlecap-thinkingcap-spark" ;;
+	bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/rtx-6000-pro) echo "bottlecap-thinkingcap-rtx" ;;
+	orcarouter-qwen3.8-27B-uncensored-nvfp4/spark) echo "orcarouter-qwen38-27b-spark" ;;
 	*) echo "" ;;
 	esac
 }
@@ -351,7 +357,10 @@ EOF
 }
 
 case "$RECIPE_ID" in
-qwen3-8-flash-next/spark | qwen3-8-flash-next/rtx-6000-pro)
+qwen3-8-flash-next/spark | qwen3-8-flash-next/rtx-6000-pro | \
+bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/spark | \
+bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/rtx-6000-pro | \
+orcarouter-qwen3.8-27B-uncensored-nvfp4/spark)
 	pack_qwen_local_ai "$RECIPE_ID" "$VERSION"
 	;;
 security/vps-baseline)
@@ -362,7 +371,7 @@ patching/windows | patching/macos | patching/linux)
 	;;
 *)
 	echo "error: unsupported recipe_id: ${RECIPE_ID}" >&2
-	echo "supported: qwen3-8-flash-next/{spark,rtx-6000-pro}, security/vps-baseline, patching/{windows,macos,linux}" >&2
+	echo "supported: qwen3-8-flash-next/{spark,rtx-6000-pro}, bottlecapai-thinkingcap-qwen3.8-27B-nvfp4/{spark,rtx-6000-pro}, orcarouter-qwen3.8-27B-uncensored-nvfp4/spark, security/vps-baseline, patching/{windows,macos,linux}" >&2
 	exit 1
 	;;
 esac

@@ -6,7 +6,10 @@
 #   MAX_NUM_BATCHED_TOKENS=8192, SEQS=256, GPU_MEM=0.95, CTX=auto
 
 rtx_escape() {
-	printf '%s' "${1//$'\n'/ }"
+	# Values are written into a sourced .runtime.env — must be shell-quoted
+	# (EXTRA_ARGS contains spaces / leading dashes that would otherwise execute).
+	local s="${1//$'\n'/ }"
+	printf '%q' "$s"
 }
 
 rtx_gpu_count() {
@@ -66,17 +69,30 @@ rtx_detect_exec_mode() {
 	echo docker
 }
 
-# Prefer writable /workspace (RunPod Pods); fall back to /runpod-volume.
+# Prefer RTX_VOLUME_ROOT when set+writable (e.g. /workspace-global); else writable
+# /workspace (RunPod Pods); else /runpod-volume.
 # Explicit HF_CACHE / HF_HOME / VLLM_CACHE_ROOT always win.
 # Note: recipe_bootstrap pre-fills HF_CACHE to $HOME/.cache/huggingface — treat
 # that home default as unset so volume prefer can apply.
+rtx_resolved_volume_root() {
+	if [[ -n "${RTX_VOLUME_ROOT:-}" && -d "${RTX_VOLUME_ROOT}" && -w "${RTX_VOLUME_ROOT}" ]]; then
+		printf '%s\n' "${RTX_VOLUME_ROOT}"
+		return 0
+	fi
+	if [[ -d /workspace && -w /workspace ]]; then
+		printf '%s\n' /workspace
+		return 0
+	fi
+	if [[ -d /runpod-volume ]]; then
+		printf '%s\n' /runpod-volume
+		return 0
+	fi
+	return 1
+}
+
 rtx_prefer_volume_cache() {
 	local root="" home_default="${HOME}/.cache/huggingface"
-	if [[ -d /workspace && -w /workspace ]]; then
-		root=/workspace
-	elif [[ -d /runpod-volume ]]; then
-		root=/runpod-volume
-	fi
+	root="$(rtx_resolved_volume_root 2>/dev/null || true)"
 	if [[ -z "$root" ]]; then
 		return 0
 	fi
@@ -218,7 +234,11 @@ rtx_interactive_select() {
 	rtx_apply_profile_defaults "$recipe_dir" "$count" || return 1
 
 	echo >&2
-	echo "Proposed serve knobs (push limits — dial down if needed):" >&2
+	if [[ "${PROFILE_ID:-}" == "gpu-1" || "${PLE_MODE:-}" == "cpu" ]]; then
+		echo "Proposed serve knobs (1× / conservative bring-up — dial up later):" >&2
+	else
+		echo "Proposed serve knobs (profile defaults — dial down if needed):" >&2
+	fi
 	echo "  profile=${PROFILE_ID} status=${PROFILE_STATUS} PLE=${PLE_MODE}" >&2
 	echo "  --tensor-parallel-size ${TENSOR_PARALLEL_SIZE}" >&2
 	echo "  --max-model-len ${CTX}" >&2
@@ -226,6 +246,7 @@ rtx_interactive_select() {
 	echo "  --max-num-seqs ${SEQS}" >&2
 	echo "  --gpu-memory-utilization ${GPU_MEM}" >&2
 	echo "  --moe-backend ${MOE_BACKEND}  prefix-caching=${ENABLE_PREFIX_CACHING}" >&2
+	echo "  VLLM_PLE_CPU_OFFLOAD=${VLLM_PLE_CPU_OFFLOAD:-0} (specialized PLE path; not --cpu-offload-gb)" >&2
 	read -r -p "Accept these defaults? [Y/n] " ans || true
 	ans="${ans:-Y}"
 	if [[ "$ans" == "n" || "$ans" == "N" ]]; then
@@ -244,6 +265,9 @@ rtx_interactive_select() {
 # Append common high-throughput vLLM flags into EXTRA_ARGS if not already present.
 rtx_apply_serve_extras() {
 	local extras=()
+	if [[ "${EXTRA_ARGS:-}" == *"--cpu-offload-gb"* ]]; then
+		echo "warn: EXTRA_ARGS contains --cpu-offload-gb — not the Qwen3.8 PLE strategy; prefer VLLM_PLE_CPU_OFFLOAD / profile PLE_MODE" >&2
+	fi
 	[[ "${NO_FLASHINFER_AUTOTUNE:-1}" == "1" ]] && extras+=(--no-enable-flashinfer-autotune)
 	if [[ "${ENABLE_PREFIX_CACHING:-1}" == "1" ]]; then
 		extras+=(--enable-prefix-caching)

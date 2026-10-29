@@ -120,7 +120,7 @@ Infra workflow: `.github/workflows/deploy-bootstrap.yml` (Wrangler). Recipe-rele
 
 | When working on… | Read |
 |------------------|------|
-| **Local AI / Qwen Spark recipe** (serve, just recipes, PLE mmap, `.env`) | [`scripts/local-ai/AGENTS.md`](scripts/local-ai/AGENTS.md) then [`scripts/local-ai/README.md`](scripts/local-ai/README.md) |
+| **Local AI recipes** (flash-next, ThinkingCap, OrcaRouter; serve, just, `.env`) | [`scripts/local-ai/AGENTS.md`](scripts/local-ai/AGENTS.md) then [`scripts/local-ai/README.md`](scripts/local-ai/README.md) |
 | **Workstation patching** | [`scripts/patching/README.md`](scripts/patching/README.md); ADR [`docs/adr/0002-ADR-workstation-patching-update-only.md`](docs/adr/0002-ADR-workstation-patching-update-only.md) |
 | **Packaging, bootstrap, catalog, `get.mycmd.site`, release channels** | [`CONTEXT.md`](CONTEXT.md) first |
 | **Any other `scripts/<area>/`** | That folder’s `README.md` (and nested READMEs) |

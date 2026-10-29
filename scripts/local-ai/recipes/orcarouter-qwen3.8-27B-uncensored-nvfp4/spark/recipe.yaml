@@ -1,0 +1,28 @@
+schema: 1
+
+recipe:
+  name: orcarouter-qwen3.8-27B-uncensored-nvfp4/spark
+  version: 0.0.1-rc1
+
+model:
+  id: orcarouter/Qwen3.8-27B-Uncensored-NVFP4
+  family: orcarouter-qwen3.8-27B-uncensored-nvfp4
+
+hardware:
+  host: spark
+  topology: single
+
+runtime:
+  engine: vllm
+  mode: container
+  image: ghcr.io/styles01/qwen38-mtp3:latest
+
+deployment:
+  strategy: dense
+  served_model_name: Qwen3.8-27B-Uncensored
+  max_model_len: 262144
+  max_num_seqs: 4
+  max_num_batched_tokens: 8192
+  gpu_memory_utilization: 0.75
+  prefix_caching: true
+  mtp: 2
